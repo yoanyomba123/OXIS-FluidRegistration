@@ -1,4 +1,4 @@
-Author: D Yoan L Mekontchou Yomba
+Author: D Yoan L Mekontchou Yombat 
 
 ## Viscous Fluid Registration Naive Implementation (Navier Stockes Based PDE)
 

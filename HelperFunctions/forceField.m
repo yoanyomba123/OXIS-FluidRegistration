@@ -14,11 +14,13 @@ xLen = length(x);
 yLen = length(y);
 % Obtain the body field
 for i=2:xLen-1;
+    i = real(i)
     for j=2:yLen-1;
+        j = real(j)
         xPos = [x(i), y(j)]; % obtain position
-        xComp = xPos(1);
-        yComp = xPos(2);
-        TemplatePos = double(Template(xComp-Ux(xComp), yComp-Uy(yComp)));
+        xComp = ceil(xPos(1));
+        yComp = ceil(xPos(2));
+        TemplatePos = double(Template(ceil(xComp-Ux(xComp)), ceil(yComp-Uy(yComp))));
         SourcePos = double(Source(xComp,yComp));
         SSD = SSD + (alpha/2)*((TemplatePos - SourcePos) ...
         *(TemplatePos - SourcePos));
@@ -34,8 +36,8 @@ for i=2:xLen;
         xPos = [x(i), y(j)]; % obtain position
         xComp = xPos(1);
         yComp = xPos(2);
-        TemplateXComp = xComp - Ux(xComp);
-        TemplateYComp = yComp - Uy(yComp);
+        TemplateXComp = ceil(xComp - Ux(xComp));
+        TemplateYComp = ceil(yComp - Uy(yComp));
         % compute the partial of T with respect to x and Y by Forward Difference
         % Scheme
         dTdx = (double(Template(TemplateXComp+1,TemplateYComp)) - double(Template(TemplateXComp-1,TemplateYComp))) / dx; % Partial of T with respect to x 

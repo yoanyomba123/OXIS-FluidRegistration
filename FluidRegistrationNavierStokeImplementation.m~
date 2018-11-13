@@ -8,6 +8,8 @@ addpath(genpath(currentFolder));
 % Read In Images
 Template = im2double(dicomread("Data/Template.dcm"));
 Source = im2double(dicomread("Data/Source.dcm"));
+Diff = Template - Source;
+figure; imshowpair(Template,Source,'diff');
 %% Defining First Set Of Initial Conditions
 Re = 1; % Reynolds Number
 % Reynolds Number is in this case due in part to the fact
@@ -17,7 +19,7 @@ x0=0;
 y0=0;
 
 dt = 10; % initialy define the maximal time step
-Umax =  1e-1; % define the deformation Limit - Need To come Back
+Umax =  0.05; % define the deformation Limit - Need To come Back
 % to this
 tInitial = 0;  % define the initial time step
 tFinal = 20; % define maximal iterations;
@@ -27,8 +29,8 @@ tFinal = 20; % define maximal iterations;
 gridLengthX = rows; % grid width
 gridlengthY = cols; % grid height
 % define number of control points in each direction
-numPointsX = 100;
-numPointsY = 100;
+numPointsX = rows;
+numPointsY = cols;
 % define number of time step until we observe current system
 % state visualy
 numSteps = 20;
@@ -59,13 +61,21 @@ figure; imagesc(Template);
 %[xx,yy]=meshgrid(0.1:0.1:1.1,0.1:0.1:1.1);
 %% Third Initialization Sequence
 % initialize displacement field
-Ux = zeros(numPointsX, numPointsY);
-Uy = zeros(numPointsX, numPointsY);
+Ux = ones(numPointsX, numPointsY);
+Uy = ones(numPointsX, numPointsY);
 
 % initialize velocity field
-Vx = zeros(numPointsX, numPointsY);
-Vy = zeros(numPointsX, numPointsY);
+Vx = ones(numPointsX, numPointsY);
+Vy = ones(numPointsX, numPointsY);
 
+for i=1:numPointsX;
+    for j=1:numPointsY;
+        %Ux(i,j)=randn(1,1);
+        %Uy(i,j)=randn(1,1);
+        Vx(i,j)=randn(1,1);
+        Vy(i,j)=randn(1,1);    
+    end
+end
 
 %% Solve for velocity based off of the PDE
 mu = 1;
@@ -84,44 +94,54 @@ Vybc = dt/Re*([vS' zeros(numPointsX,numPointsY-3) vN']/dx^2+...
 
 
 fprintf('initialization')
-Lp = kron(speye(numPointsY),K1(numPointsX,dx,1))+kron(K1(numPointsY,dy,1),speye(numPointsX));
-Lp(1,1) = 3/2*Lp(1,1);
-perp = symamd(Lp); 
-Rp = chol(Lp(perp,perp)); 
-Rpt = Rp';
-Lu = speye((numPointsX-1)*numPointsY)+dt/Re*(kron(speye(numPointsY),K1(numPointsX-1,dx,2))+...
-     kron(K1(numPointsY,dy,3),speye(numPointsX-1)));
-peru = symamd(Lu); Ru = chol(Lu(peru,peru)); Rut = Ru';
-Lv = speye(numPointsX*(numPointsY-1))+dt/Re*(kron(speye(numPointsY-1),K1(numPointsX,dx,3))+...
-     kron(K1(numPointsY-1,dy,2),speye(numPointsX)));
-perv = symamd(Lv); Rv = chol(Lv(perv,perv)); Rvt = Rv';
-Lq = kron(speye(numPointsY-1),K1(numPointsX-1,dx,2))+kron(K1(numPointsY-1,dy,2),speye(numPointsX-1));
-
-
 centralDiffMat = full(gallery('tridiag',numPointsX,-1,2,-1));
-perq = symamd(Lq); Rq = chol(Lq(perq,perq)); Rqt = Rq';
-for i=1:3;
-    % Force Field Computation
-    force = forceField(Template, Source, x ,y, Ux, Uy,dx, dy);
-    
-    % Visualize Force Vector Field At each Location for the Constituent
-    % image
-    figure; quiver(X, Y, force(:,:,1), force(:,:,2));
-    disp("Displaying force fields");
-    % compute 2nd order DIFFQ of V wrt xx and yy
-    d2Vx_xx = centralDiffMat .* Vx;  d2Vx_yy = centralDiffMat .* Vx'; % multilplying by the transpose gives us differentiation in the y direction
-    d2Vy_xx = centralDiffMat .* Vy;  d2Vy_yy = centralDiffMat .* Vy;
-    
-    % compute 2nd order DIFFQ of V wrt xy
-    % Cast U as a vector
-    Vx_vec = Vx(:);    Vy_vec = Vy(:);
-    % Mixed derivative operator
-    Ax = kron(d2Vx_xx,d2Vx_yy);     Ay = kron(d2Vy_xx,d2Vy_yy);
-    
-    Vx_xy_num = Ax*Vx_vec;    Vy_xy_num = Ay*Vy_vec;
+% Define Fourier matrix for use later on
+fourierMat = dftmtx(numPointsX);
+fourierMatInv = inv(fourierMat);
 
-    d2Vx_xy = reshape(Vx_xy_num,numPointsX,numPointsY);
-    d2Vy_xy = reshape(Vy_xy_num,numPointsX,numPointsY);
+figure;
+for i=1:tFinal;
+    TEMPx(:,:,i) = Ux;
+    TEMPy(:,:,i) = Uy;
+    Wx = interp2(TEMPx(:,:,i), X(1:end, 1:end)-Ux);
+    Wy = interp2(TEMPy(:,:,i), Y(1:end-2, 1:end-1)-Uy);
+    Tx = interp2(Template,X(1:end-2, 1:end-1)-Wx-Ux);
+    Ty = interp2(Template,X(1:end-2, 1:end-1)-Wy-Uy);
+
+    % Force Field Computation
+    force = forceField(Template, Source, ceil(x) ,ceil(y), Ux, Uy,dx, dy);
+    
+    drawnow
+    % visualize the force field on the image
+    visualize(force(:,:,1), force(:,:,2), X, Y, Diff);
+    disp("Displaying force fields");
+    pause(3);
+
+    % compute 2nd order DIFFQ of V wrt xx and yy
+%     d2Vx_xx = centralDiffMat .* Vx;  d2Vx_yy = centralDiffMat .* Vx'; % multilplying by the transpose gives us differentiation in the y direction
+%     d2Vy_xx = centralDiffMat .* Vy;  d2Vy_yy = centralDiffMat .* Vy;
+    
+    % Compute the first order partial differential equation of the vector
+    % field in x and y direction as well as the 2nd order version
+    [dVx_x, dVx_y] = gradient(Vx, dx, dy);     
+    [dVy_x, dVy_y] = gradient(Vy, dx, dy);
+    [d2Vx_xx, d2Vx_xy] = gradient(dVx_x, dx, dy);       [d2Vx_yx, d2Vx_yy] = gradient(dVx_y, dx, dy);
+    [d2Vy_xx, d2Vy_xy] = gradient(dVy_x, dx, dy);       [d2Vy_yx, d2Vy_yy] = gradient(dVy_y, dx, dy);
+
+  
+
+%     
+%     
+%     % compute 2nd order DIFFQ of V wrt xy
+%     % Cast U as a vector
+%     Vx_vec = Vx(:);    Vy_vec = Vy(:);
+%     % Mixed derivative operator
+%     Ax = kron(d2Vx_xx,d2Vx_yy);     Ay = kron(d2Vy_xx,d2Vy_yy);
+%     
+%     Vx_xy_num = Ax*Vx_vec;    Vy_xy_num = Ay*Vy_vec;
+% 
+%     d2Vx_xy = reshape(Vx_xy_num,numPointsX,numPointsY);
+%     d2Vy_xy = reshape(Vy_xy_num,numPointsX,numPointsY);
 
     
     % Compute A
@@ -130,39 +150,92 @@ for i=1:3;
     A21 = (mu + lambda) .* d2Vx_xy;
     A22 = (mu) .* d2Vy_xx + (mu + 2*lambda) .* d2Vy_yy;
     
-    % Perform pseudoinverse
-    D11 = diag(diag(A11));
-    D12 = diag(diag(A12));
-    D21 = diag(diag(A21));
-    D22 = diag(diag(A22));
+    % Apply fourier transform to A to solve linear sys. of equations faster
+    A11 = fourierMat .* A11 .* fourierMatInv;
+    A12 = fourierMat .* A12 .* fourierMatInv;
+    A21 = fourierMat .* A21 .* fourierMatInv;
+    A22 = fourierMat .* A22 .* fourierMatInv;
     
-    Vx = force(1,1,1) .* D11 + force(1,1,2) .*D12;
-    Vy = force(1,1,1) .* D21 + force(1,1,2) .*D22;
-    figure; quiver(X, Y, Vx, Vy);
+    % Apply moore penrose pseudoinverse to handle singular cases of A in a
+    % special manner
+    D11 = pinv(A11);
+    D12 = pinv(A12);
+    D21 = pinv(A21);
+    D22 = pinv(A22);
+    
+    % update and solve for v
+    Vx = force(1:end-1,1:end-1,1) .* D11 + force(1:end-1,1:end-1,2) .* D12;
+    Vy = force(1:end-1,1:end-1,1) .* D21 + force(1:end-1,1:end-1,2) .*D22;
+    drawnow
+    visualize(Vx, Vy,X(2:end, 2:end), Y(2:end, 2:end), Diff);
     disp("Displaying velocity vector fields \n");
+    pause(3);
     
-    % Compute the pertubation
-    Px = Vx -  sum(sum(Vx * diff(Ux)'));
-    Py = Vy -  sum(sum(Vy * diff(Uy)'));
+    J_Ux11 = (1/2)*(centralDiffMat .* Ux); detJ_Ux11 = det(J_Ux11);
+    J_Ux12 = (1/2)*(centralDiffMat .* Uy); detJ_Ux12 = det(J_Ux12);
     
-    % obtain delta based on the quotient of the limit of the deformaton and
-    % the pertubation
-    ind = Umax/(max( max(max(Px)) ,  max(max(Py))));
-    delta = ind - 0.05;
+    J_Uy21 = (1/2)*(centralDiffMat .* Uy); detJ_Uy21 = det(J_Uy21);
+    J_Uy22 = (1/2)*(centralDiffMat .* Uy); detJ_Uy22 = det(J_Uy22);
+
+    detSet = [detJ_Ux11,detJ_Ux12,detJ_Uy21,detJ_Uy22];
     
-    % Update U
-    Ux = Ux + delta.*Px;
-    Uy = Uy + delta.*Py;
-    figure; quiver(X, Y, Ux, Uy));
+    % compute min of determinant of jacobian
+    minVal = min(detSet);
+    if(minVal < -0.5)
+      % set U to 0
+      TEMPx(:,:,i) = Wx+ Ux;
+      TEMPy(:,:,i) = Wy+ Uy;
+
+      Ux = 0 .* Ux;
+      Uy = 0 .* Uy;
+    else 
+       deltaUx = J_Ux11 .* Vx + J_Ux12 .* Vx;
+       deltaUy = J_Uy21 .* Vy + J_Uy22 .* Vy;
+       Px = norm(deltaUx);
+       Py = norm(deltaUy);
+       deltaX = min(1, 0.05/max(max(Px)));
+       deltaY = min(1, 0.05/max(max(Py)));
+       Ux = Ux + deltaX .* deltaUx;
+       Uy = Uy + deltaY .* deltaUy
+    end
+    
+%     % compute the gradient of the displacement vector
+%     [dUx_x, dUx_y] = gradient(Ux);
+%     [dUy_x, dUy_y] = gradient(Uy);
+%     
+%     % Compute the pertubation
+%     Px = Vx - sum(sum(Vx * diff(Ux)'));
+%     Py = Vy - sum(sum(Vy * diff(Uy)'));
+%     
+%     % obtain delta based on the quotient of the limit of the deformaton and
+%     % the pertubation
+%     ind = 0;
+%     placeHolder = max( max(max(Px)) ,  max(max(Py)));
+%     if(placeHolder == 0)
+%         ind = Umax/1;
+%     else
+%         ind = Umax/placeHolder;
+%     end
+%     delta = ind-0.000000005;
+%     
+%     % Update U
+%     Ux = Ux + delta;
+%     Uy = Uy + delta;
+    drawnow
+    visualize(Ux, Uy,X(2:end, 2:end), Y(2:end, 2:end), Diff);
+    pause(3);
     disp("Displaying displacement vector fields \n");
     
 end
-
+Ux = Wx + Ux ;
+Uy = Wy + Uy
+Toutx = interp2(Template, X - Ux);
+Touty = interp2(Template, X - Uy)
 figure; quiver(X(1:end-2, 1:end-1),Y(1:end-2,1:end-1),Vx,Vy');
 %%
 %% 
-clear all; close all;
-mit18086_navierstokes()
+%clear all; close all;
+%mit18086_navierstokes()
 %%
 for i=1:length(X);
     for j = 1:length(Y);
@@ -179,91 +252,3 @@ end
 
 
 
-%%
-clc; clear all; close all;
-clc 
-clear
-myu=0.000012;
-den=1.29;
-x0=0;
-y0=0;
-LX=1;
-LY=1;
-M=20;
-N=20;
-dx=(x0+LX)/M;
-dy=(y0+LY)/N;
-[x,y]=meshgrid(x0:dx:LX,y0:dy:LY);
-plot(x,y,'*r');hold on;grid on
-[xx,yy]=meshgrid(0.1:0.1:1.1,0.1:0.1:1.1);
-plot(xx,yy,'*k');
-
-for i=1:M;
-    for j=1:N;
-        u(i,j)=randn(1,1);
-        v(i,j)=randn(1,1);
-        uu(i,j)=3;
-        vv(i,j)=1;
-        U(i,j)=u(i,j)+uu(i,j);
-        V(i,j)=v(i,j)+vv(i,j);
-    end
-end
-
-for i=1:M;
-    for j=1:N;
-        x1(i,j)=i*dx;
-        y1(i,j)=j*dy;
-    end
-end
-
-for i=1:M;
-    for j=1:N;
-        dudy(i,j)=(u(i+1)-u(i))/dy;
-        dvdx(i,j)=(v(i+1)-v(i))/dx;
-        duudy(i,j)=(uu(i+1)-uu(i))/dy;
-        dvvdx(i,j)=(vv(i+1)-vv(i))/dx;
-        s(i,j)=0.5*(dudy(i,j)+dvdx(i,j));
-        ss(i,j)=0.5*(duudy(i,j)+dvvdx(i,j));
-    end
-end
-
-for i=1:M;
-    for j=1:N;
-        if (i==j)
-            c=1;
-        elseif (i~=j)
-            c=0;
-        end
-        px(i,j)=0.1*c*randn(1,1);
-        py(i,j)=0.1*c*randn(1,1);
-        ppx(i,j)=0.3*c;
-        ppy(i,j)=0.1*c;
-        Px(i,j)=px(i,j)+ppx(i,j);
-        Py(i,j)=py(i,j)+ppy(i,j);
-        P(i,j)=Px(i,j)+Py(i,j);
-    end
-end
-
-for i=1:M;
-    for j=1:N;
-        Mstress(i,j)=-(ppx(i,j)/dx+ppy(i,j)/dy)+2*myu*ss(i,j);
-        stressf(i,j)=-(px(i,j)/dx+py(i,j)/dy)+2*myu*s(i,j);
-        for a=1:10;
-        uuu(a)=randn(1,1);
-        vvv(a)=randn(1,1);
-        end
-        um(i,j)=mean(uuu);
-        vm(i,j)=mean(vvv);
-        rt=um(i,j)*vm(i,j);
-        rtt=mean(rt);
-        rrtt=den*rtt;
-        rrrtt=mean(rrtt);
-        ReynoldsStress(i,j)=den*rrrtt;
-    end
-end
-
-[C,h] = contour(x1,y1,P);
-set(1, 'units', 'centimeters', 'pos', [0 0 120.5 100])
-colormap summer
-
-quiver(x1,y1,U,V)
