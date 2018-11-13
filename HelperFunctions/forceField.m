@@ -14,9 +14,9 @@ xLen = length(x);
 yLen = length(y);
 % Obtain the body field
 for i=2:xLen-1;
-    i = real(i)
+    i = real(i);
     for j=2:yLen-1;
-        j = real(j)
+        j = real(j);
         xPos = [x(i), y(j)]; % obtain position
         xComp = ceil(xPos(1));
         yComp = ceil(xPos(2));

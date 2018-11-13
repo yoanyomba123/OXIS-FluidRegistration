@@ -11,10 +11,6 @@ Source = im2double(dicomread("Data/Source.dcm"));
 Diff = Template - Source;
 figure; imshowpair(Template,Source,'diff');
 %% Defining First Set Of Initial Conditions
-Re = 1; % Reynolds Number
-% Reynolds Number is in this case due in part to the fact
-% that the aim is to wholely incorporate the diffusive
-% mechaninism into the model without performing alterations
 x0=0;
 y0=0;
 
@@ -29,11 +25,13 @@ tFinal = 20; % define maximal iterations;
 gridLengthX = rows; % grid width
 gridlengthY = cols; % grid height
 % define number of control points in each direction
-numPointsX = 40+1;
-numPointsY = 40+1;
+numPointsX = 300+1;
+numPointsY = 300+1;
+
 % define number of time step until we observe current system
 % state visualy
 numSteps = 20;
+
 %% Defining Second Set Of Experimental Intial Conditions
 numTimeSteps = ceil(tFinal/dt);
 dt = ceil(tFinal/numTimeSteps);
@@ -61,21 +59,21 @@ figure; imagesc(Template);
 %[xx,yy]=meshgrid(0.1:0.1:1.1,0.1:0.1:1.1);
 %% Third Initialization Sequence
 % initialize displacement field
-Ux = ones(numPointsX, numPointsY);
-Uy = ones(numPointsX, numPointsY);
+Ux = zeros(numPointsX, numPointsY);
+Uy = zeros(numPointsX, numPointsY);
 
 % initialize velocity field
-Vx = ones(numPointsX, numPointsY);
-Vy = ones(numPointsX, numPointsY);
+Vx = zeros(numPointsX, numPointsY);
+Vy = zeros(numPointsX, numPointsY);
 
-for i=1:numPointsX;
-    for j=1:numPointsY;
-        %Ux(i,j)=randn(1,1);
-        %Uy(i,j)=randn(1,1);
-        Vx(i,j)=randn(1,1);
-        Vy(i,j)=randn(1,1);    
-    end
-end
+% for i=1:numPointsX;
+%     for j=1:numPointsY;
+%         %Ux(i,j)=randn(1,1);
+%         %Uy(i,j)=randn(1,1);
+%         Vx(i,j)=randn(1,1);
+%         Vy(i,j)=randn(1,1);    
+%     end
+% end
 
 %% Solve for velocity based off of the PDE
 mu = 1;
@@ -87,12 +85,6 @@ uS = x*0;      vS = avg(x)*0;
 uW = avg(y)*0; vW = y*0;
 uE = avg(y)*0; vE = y*0;
 %-----------------------------------------------------------------------
-Vxbc = dt/Re*([2*uS(2:end-1)' zeros(numPointsX-1,numPointsY-2) 2*uN(2:end-1)']/dx^2+...
-      [uW;zeros(numPointsX-3,numPointsY);uE]/dy^2);
-Vybc = dt/Re*([vS' zeros(numPointsX,numPointsY-3) vN']/dx^2+...
-      [2*vW(2:end-1);zeros(numPointsX-2,numPointsY-1);2*vE(2:end-1)]/dy^2);
-
-
 fprintf('initialization')
 centralDiffMat = full(gallery('tridiag',numPointsX,-1,2,-1));
 % Define Fourier matrix for use later on
@@ -101,10 +93,10 @@ fourierMatInv = inv(fourierMat);
 
 figure;
 for i=1:tFinal;
-    TEMPx(:,:,i) = Ux;
-    TEMPy(:,:,i) = Uy;
-    Wx = interp2(TEMPx(:,:,i), X(1:end-1, 1:end-1)-Ux);
-    Wy = interp2(TEMPy(:,:,i), Y(1:end-1, 1:end-1)-Uy);
+    %TEMPx(:,:,i) = Ux;
+    %TEMPy(:,:,i) = Uy;
+    %Wx = interp2(TEMPx(:,:,i), X(1:end-1, 1:end-1)-Ux);
+    %Wy = interp2(TEMPy(:,:,i), Y(1:end-1, 1:end-1)-Uy);
     %Tx = interp2(Template,X(1:end-1, 1:end-1)-Wx-Ux);
     %Ty = interp2(Template,Y(1:end-1, 1:end-1)-Wy-Uy);
 
@@ -116,10 +108,6 @@ for i=1:tFinal;
     visualize(force(:,:,1), force(:,:,2), X, Y, Diff);
     disp("Displaying force fields");
     pause(3);
-
-    % compute 2nd order DIFFQ of V wrt xx and yy
-%     d2Vx_xx = centralDiffMat .* Vx;  d2Vx_yy = centralDiffMat .* Vx'; % multilplying by the transpose gives us differentiation in the y direction
-%     d2Vy_xx = centralDiffMat .* Vy;  d2Vy_yy = centralDiffMat .* Vy;
     
     % Compute the first order partial differential equation of the vector
     % field in x and y direction as well as the 2nd order version
@@ -185,7 +173,9 @@ for i=1:tFinal;
       % set U to 0
       %TEMPx(:,:,i) = Wx + Ux;
       %TEMPy(:,:,i) = Wy + Uy;
-
+        
+      % Must Implement Regridding Here In Order To Reconfigure V at the
+      % next iteration
       Ux = 0 .* Ux;
       Uy = 0 .* Uy;
     else 
@@ -195,32 +185,11 @@ for i=1:tFinal;
        Py = norm(deltaUy);
        deltaX = min(1, 0.05/max(max(Px)));
        deltaY = min(1, 0.05/max(max(Py)));
-       Ux = Ux + deltaX .* deltaUx;
-       Uy = Uy + deltaY .* deltaUy
+       delta = min(deltaX,deltaY);
+       Ux = Ux + delta .* deltaUx;
+       Uy = Uy + delta .* deltaUy
     end
     
-%     % compute the gradient of the displacement vector
-%     [dUx_x, dUx_y] = gradient(Ux);
-%     [dUy_x, dUy_y] = gradient(Uy);
-%     
-%     % Compute the pertubation
-%     Px = Vx - sum(sum(Vx * diff(Ux)'));
-%     Py = Vy - sum(sum(Vy * diff(Uy)'));
-%     
-%     % obtain delta based on the quotient of the limit of the deformaton and
-%     % the pertubation
-%     ind = 0;
-%     placeHolder = max( max(max(Px)) ,  max(max(Py)));
-%     if(placeHolder == 0)
-%         ind = Umax/1;
-%     else
-%         ind = Umax/placeHolder;
-%     end
-%     delta = ind-0.000000005;
-%     
-%     % Update U
-%     Ux = Ux + delta;
-%     Uy = Uy + delta;
     drawnow
     visualize(Ux, Uy,X(2:end, 2:end), Y(2:end, 2:end), Diff);
     pause(3);
