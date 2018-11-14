@@ -25,8 +25,8 @@ tFinal = 20; % define maximal iterations;
 gridLengthX = rows; % grid width
 gridlengthY = cols; % grid height
 % define number of control points in each direction
-numPointsX = 300+1;
-numPointsY = 300+1;
+numPointsX = 30+1;
+numPointsY = 30+1;
 
 % define number of time step until we observe current system
 % state visualy
@@ -92,7 +92,7 @@ fourierMat = dftmtx(numPointsX);
 fourierMatInv = inv(fourierMat);
 
 figure;
-for i=1:tFinal;
+for i=1:1
     %TEMPx(:,:,i) = Ux;
     %TEMPy(:,:,i) = Uy;
     %Wx = interp2(TEMPx(:,:,i), X(1:end-1, 1:end-1)-Ux);
@@ -101,7 +101,7 @@ for i=1:tFinal;
     %Ty = interp2(Template,Y(1:end-1, 1:end-1)-Wy-Uy);
 
     % Force Field Computation
-    force = forceField(Template, Source, ceil(x) ,ceil(y), Ux, Uy,dx, dy);
+    force = forceField(Template, Source, ceil(x) ,ceil(y), Ux, Uy,dx, dy, "QN");
     
     drawnow
     % visualize the force field on the image
@@ -132,19 +132,25 @@ for i=1:tFinal;
 %     d2Vy_xy = reshape(Vy_xy_num,numPointsX,numPointsY);
 
     
-    % Compute A
+    % Compute A which is a step in solving the PDE
+    % Important to note that A = [A11, A12; A21, A22] is a circular matrix
+    % since we utilize periodic boundary conditions for the expression
+    % and has a dimension of (2N)X(2N) where N = n1*n2
+    % Now, we want to solve the linear system of equation Av = F but due to
+    % the high dimensionality of A we have to employ the FFT method to
+    % diagonalize A in O(nlogn)
     A11 = ((mu + 2*lambda) .* d2Vx_xx) + (mu .* d2Vx_yy);
     A12 = (mu + lambda) .* d2Vy_xy;
     A21 = (mu + lambda) .* d2Vx_xy;
     A22 = (mu) .* d2Vy_xx + (mu + 2*lambda) .* d2Vy_yy;
     
-    % Apply fourier transform to A to solve linear sys. of equations faster
+    % Apply fourier transform to A(Circular Matrix) to diagonalize it 
     A11 = fourierMat .* A11 .* fourierMatInv;
     A12 = fourierMat .* A12 .* fourierMatInv;
     A21 = fourierMat .* A21 .* fourierMatInv;
     A22 = fourierMat .* A22 .* fourierMatInv;
     
-    % Apply moore penrose pseudoinverse to handle singular cases of A in a
+    % Apply moore penrose pseudoinverse to handle cases of singularity of A in a
     % special manner
     D11 = pinv(A11);
     D12 = pinv(A12);
@@ -155,7 +161,7 @@ for i=1:tFinal;
     Vx = force(1:end-1,1:end-1,1) .* D11 + force(1:end-1,1:end-1,2) .* D12;
     Vy = force(1:end-1,1:end-1,1) .* D21 + force(1:end-1,1:end-1,2) .*D22;
     drawnow
-    visualize(Vx, Vy,X(2:end, 2:end), Y(2:end, 2:end), Diff);
+    figure; visualize(Vx, Vy,X(2:end, 2:end), Y(2:end, 2:end), Diff);
     disp("Displaying velocity vector fields \n");
     pause(3);
     
@@ -191,7 +197,7 @@ for i=1:tFinal;
     end
     
     drawnow
-    visualize(Ux, Uy,X(2:end, 2:end), Y(2:end, 2:end), Diff);
+    figure; visualize(Ux, Uy,X(2:end, 2:end), Y(2:end, 2:end), Diff);
     pause(3);
     disp("Displaying displacement vector fields \n");
     
@@ -205,15 +211,7 @@ figure; quiver(X(1:end-2, 1:end-1),Y(1:end-2,1:end-1),Vx,Vy');
 %% 
 %clear all; close all;
 %mit18086_navierstokes()
-%%
-for i=1:length(X);
-    for j = 1:length(Y);
-        x0 = [i,j];
-        % compute the body field
-        F = 7;
-        
-    end
-end
+
 
 
 

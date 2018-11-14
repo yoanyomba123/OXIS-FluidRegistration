@@ -48,17 +48,14 @@ for i=2:xLen;
         fx(i,j) = -alpha*(double(Template(TemplateXComp,TemplateYComp)) - double(Source(i,yComp))) * dTdx;
 		fy(i,j) = -alpha*(double(Template(TemplateXComp,TemplateYComp)) - double(Source(i,yComp))) * dTdy;
         Sample = Template - Source;
-        
-        
         if(method == "QN")
            if i == j
+               N = size(Sample(1:i, 1:j));
                Data = Sample(1:i, 1:j); 
-               centered_diff = full(gallery('tridiag', i, 1,-2,1));
+               centered_diff = full(gallery('tridiag', N, 1,-2,1))
                Hessian = Data .* centered_diff .* centered_diff;
-               Gradient = gradient(Data);
-               if(det(Hessian) > 0)
-                fx(1:i, 1:j) = fx(1:i, 1:j) - (inv(Hessian) .* Gradient);
-                fy(1:i, 1:j) = fy(1:i, 1:j) - (inv(Hessian) .* Gradient);
+               if(det(hessian) > 0)
+                fx(1:i, 1:j) = Data;
                end
            end
         end
