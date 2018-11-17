@@ -15,15 +15,17 @@ x0=0;
 y0=0;
 
 dt = 10; % initialy define the maximal time step
-Umax =  0.05; % define the deformation Limit - Need To come Back
+Umax =  0.5; % define the deformation Limit - Need To come Back
 % to this
 tInitial = 0;  % define the initial time step
 tFinal = 20; % define maximal iterations;
+
 %% Defining Second Set Of Initial Conditions
 % grid/mesh size shoud match that of the template 
 [rows, cols] = size(Template);
 gridLengthX = rows; % grid width
 gridlengthY = cols; % grid height
+
 % define number of control points in each direction
 numPointsX = 30+1;
 numPointsY = 30+1;
@@ -65,15 +67,6 @@ Uy = zeros(numPointsX, numPointsY);
 % initialize velocity field
 Vx = zeros(numPointsX, numPointsY);
 Vy = zeros(numPointsX, numPointsY);
-
-% for i=1:numPointsX;
-%     for j=1:numPointsY;
-%         %Ux(i,j)=randn(1,1);
-%         %Uy(i,j)=randn(1,1);
-%         Vx(i,j)=randn(1,1);
-%         Vy(i,j)=randn(1,1);    
-%     end
-% end
 
 %% Solve for velocity based off of the PDE
 mu = 1;

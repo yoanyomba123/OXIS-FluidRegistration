@@ -1,4 +1,4 @@
-function force = forceField(Template, Source, x, y, Ux, Uy, dx, dy, method);
+function force = forceField(Template, Source, displacement, gridObject, method);
 % Template and Source are images
 % x is a vector(point) comprised of two values delineating
 % the x component and the y component of the point
@@ -8,6 +8,13 @@ function force = forceField(Template, Source, x, y, Ux, Uy, dx, dy, method);
 % Computes Force Field
 SSD = 0.0;
 alpha = 0.5;
+
+x = gridObject.x;
+y = gridObject.y;
+Ux = displacement.x;
+Uy = displacement.y;
+dx = gridObject.dx;
+dy = gridObject.dy;
 
 % Want to start iteration at points not on edges
 xLen = length(x);
@@ -66,9 +73,9 @@ for i=2:xLen;
     end
 end
 
-fx = (-1.0).*fx;
-fy = (-1.0).*fy;
-
-force(:,:,1) = fx;
-force(:,:,2) = fy;
+%fx = (-1.0).*fx;
+%fy = (-1.0).*fy;
+force = struct();
+force.x = fx;
+force.y = fy;
 end
