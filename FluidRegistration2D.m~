@@ -102,6 +102,7 @@ fftMatInvOperator = inv(fftMatOperator);
 
 A = struct();
 V = struct();
+Jacobian = struct();
 %% Obtain True Template
 sampleTemplate = gridObject.grid.x;
 for i = 2:length(x)
@@ -147,7 +148,7 @@ for i = 1:1;
     Sy = stencil.S21 + stencil.S22;
     
     A.x = conv2(gridObject.sampleTemplate, Sx, 'same');
-    A.y = conv2(gridObject.sampleTemplate, Sy);
+    A.y = conv2(gridObject.sampleTemplate, Sy, 'same');
     A.FFTx = fftMatOperator .* A.x .* fftMatInvOperator;
     A.FFTy = fftMatOperator .* A.y .* fftMatInvOperator;
     
@@ -160,5 +161,17 @@ for i = 1:1;
     visualize(V.x, V.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate - gridObject.sampleSource);
     disp("Displaying Velocity Vector fields");
     pause(3);
+    
+    Jacobian.x = centralDiffMatOperator .* V.x;
+    Jacobian.y = centralDiffMatOperator .* V.y;
+    
+    minJacobian = min(det(Jacobian.x), det(Jacobian.y));
+    if(minJacobian < tolerance.jacobainTolerance)
+        regridCounter = regridCounter+1;
+         = struct();
+        temp.x = wK{i}.x + U.x;
+        temp.y = wK{i}.y + U.y;
+        yQ{regridCounter} = temp;
+    end
     
 end

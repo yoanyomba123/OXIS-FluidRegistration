@@ -19,23 +19,23 @@ dy = gridObject.dy;
 % Want to start iteration at points not on edges
 xLen = length(x);
 yLen = length(y);
-% Obtain the body field
-for i=2:xLen-1;
-    i = real(i);
-    for j=2:yLen-1;
-        j = real(j);
-        xPos = [x(i), y(j)]; % obtain position
-        xComp = ceil(xPos(1));
-        yComp = ceil(xPos(2));
-        TemplatePos = double(Template(ceil(xComp-Ux(xComp)), ceil(yComp-Uy(yComp))));
-        SourcePos = double(Source(xComp,yComp));
-        SSD = SSD + (alpha/2)*((TemplatePos - SourcePos) ...
-        *(TemplatePos - SourcePos));
-    end
-end
-
-% scale the Sum of Squared Difference
-SSD = SSD/((xLen-2 + yLen-2));
+% % Obtain the body field
+% for i=2:xLen-1;
+%     i = real(i);
+%     for j=2:yLen-1;
+%         j = real(j);
+%         xPos = [x(i), y(j)]; % obtain position
+%         xComp = ceil(xPos(1));
+%         yComp = ceil(xPos(2));
+%         TemplatePos = double(Template(ceil(xComp-Ux(xComp)), ceil(yComp-Uy(yComp))));
+%         SourcePos = double(Source(xComp,yComp));
+%         SSD = SSD + (alpha/2)*((TemplatePos - SourcePos) ...
+%         *(TemplatePos - SourcePos));
+%     end
+% end
+% 
+% % scale the Sum of Squared Difference
+% SSD = SSD/((xLen-2 + yLen-2));
 
 % Now Compute Force Field
 for i=2:xLen;
@@ -54,6 +54,8 @@ for i=2:xLen;
         % gradient
         fx(i,j) = -alpha*(double(Template(TemplateXComp,TemplateYComp)) - double(Source(i,yComp))) * dTdx;
 		fy(i,j) = -alpha*(double(Template(TemplateXComp,TemplateYComp)) - double(Source(i,yComp))) * dTdy;
+        
+        % TODO : FIX THIS LATER
         Sample = Template - Source;
         
         

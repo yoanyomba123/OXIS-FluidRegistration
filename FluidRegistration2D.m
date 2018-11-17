@@ -57,7 +57,7 @@ gridObject.grid = struct();
 
 % generate points that are not on the boundary of the image
 x = linspace(0, rows-2, gridObject.numXPoints); x = ceil(x);
-y = linspace(0, cols-2, gridObject.numYPoints); x = ceil(y);
+y = linspace(0, cols-2, gridObject.numYPoints); y = ceil(y);
 [X,Y] = meshgrid(x, y);
 gridObject.rows = rows;
 gridObject.cols = cols;
@@ -102,6 +102,7 @@ fftMatInvOperator = inv(fftMatOperator);
 
 A = struct();
 V = struct();
+Jacobian = struct();
 %% Obtain True Template
 sampleTemplate = gridObject.grid.x;
 for i = 2:length(x)
@@ -133,6 +134,7 @@ for i = 1:1;
        end
     end
     
+    % make a change here and pass in tK{i} instead
     force = forceField(Template, Source, U, gridObject, "none");
     
     drawnow
@@ -160,5 +162,18 @@ for i = 1:1;
     visualize(V.x, V.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate - gridObject.sampleSource);
     disp("Displaying Velocity Vector fields");
     pause(3);
+    
+    Jacobian.x = centralDiffMatOperator .* V.x;
+    Jacobian.y = centralDiffMatOperator .* V.y;
+    
+    minJacobian = min(det(Jacobian.x), det(Jacobian.y));
+    if(minJacobian < tolerance.jacobainTolerance)
+        regridCounter = regridCounter+1;
+        regridEntity = struct();
+        regridEntity.x = wK{i}.x + U.x;
+        regridEntity.y = wK{i}.y + U.y;
+        yQ{regridCounter} = regridEntity;
+        
+    end
     
 end
