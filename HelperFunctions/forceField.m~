@@ -1,4 +1,4 @@
-function force = forceField(Template, Source, displacement, gridObjee, method);
+function force = forceField(Template, Source, displacement, gridObject, method);
 % Template and Source are images
 % x is a vector(point) comprised of two values delineating
 % the x component and the y component of the point
@@ -9,33 +9,33 @@ function force = forceField(Template, Source, displacement, gridObjee, method);
 SSD = 0.0;
 alpha = 0.5;
 
-x = ObjectArg.x;
-y = ObjectArg.y;
+x = gridObject.x;
+y = gridObject.y;
 Ux = displacement.x;
 Uy = displacement.y;
-dx = ObjectArg.dx;
-dy = ObjectArg.dy;
+dx = gridObject.dx;
+dy = gridObject.dy;
 
 % Want to start iteration at points not on edges
 xLen = length(x);
 yLen = length(y);
-% Obtain the body field
-for i=2:xLen-1;
-    i = real(i);
-    for j=2:yLen-1;
-        j = real(j);
-        xPos = [x(i), y(j)]; % obtain position
-        xComp = ceil(xPos(1));
-        yComp = ceil(xPos(2));
-        TemplatePos = double(Template(ceil(xComp-Ux(xComp)), ceil(yComp-Uy(yComp))));
-        SourcePos = double(Source(xComp,yComp));
-        SSD = SSD + (alpha/2)*((TemplatePos - SourcePos) ...
-        *(TemplatePos - SourcePos));
-    end
-end
-
-% scale the Sum of Squared Difference
-SSD = SSD/((xLen-2 + yLen-2));
+% % Obtain the body field
+% for i=2:xLen-1;
+%     i = real(i);
+%     for j=2:yLen-1;
+%         j = real(j);
+%         xPos = [x(i), y(j)]; % obtain position
+%         xComp = ceil(xPos(1));
+%         yComp = ceil(xPos(2));
+%         TemplatePos = double(Template(ceil(xComp-Ux(xComp)), ceil(yComp-Uy(yComp))));
+%         SourcePos = double(Source(xComp,yComp));
+%         SSD = SSD + (alpha/2)*((TemplatePos - SourcePos) ...
+%         *(TemplatePos - SourcePos));
+%     end
+% end
+% 
+% % scale the Sum of Squared Difference
+% SSD = SSD/((xLen-2 + yLen-2));
 
 % Now Compute Force Field
 for i=2:xLen;
@@ -47,14 +47,16 @@ for i=2:xLen;
         TemplateYComp = ceil(yComp - Uy(yComp));
         % compute the partial of T with respect to x and Y by Forward Difference
         % Scheme
-        dTdx = (double(Template(TemplateXComp+1,TemplateYComp)) - double(Template(TemplateXComp-1,TemplateYComp))) / dx; % Partial of T with respect to x 
-        dTdy = (double(Template(TemplateXComp,TemplateYComp+1)) - double(Template(TemplateXComp,TemplateYComp-1))) / dy; % Partial of T with respect to y
+        dTdx = (double(Template.x(i+1,j)) - double(Template.x(i-1,j))) / dx; % Partial of T with respect to x 
+        dTdy = (double(Template.y(i,TemplateYComp+1)) - double(Template.y(TemplateXComp,TemplateYComp-1))) / dy; % Partial of T with respect to y
         % Compute the actual force field by taking the difference between
         % the template image and the source multiplied by the computed
         % gradient
-        fx(i,j) = -alpha*(double(Template(TemplateXComp,TemplateYComp)) - double(Source(i,yComp))) * dTdx;
-		fy(i,j) = -alpha*(double(Template(TemplateXComp,TemplateYComp)) - double(Source(i,yComp))) * dTdy;
-        Sample = Template - Source;
+        fx(i,j) = -alpha*(double(Template.x(TemplateXComp,TemplateYComp)) - double(Source(i,yComp))) * dTdx;
+		fy(i,j) = -alpha*(double(Template.y(TemplateXComp,TemplateYComp)) - double(Source(i,yComp))) * dTdy;
+        
+        % TODO : FIX THIS LATER
+        Sample = Template.x - Source;
         
         
         if(method == "QN")
@@ -73,9 +75,9 @@ for i=2:xLen;
     end
 end
 
-fx = (-1.0).*fx;
-fy = (-1.0).*fy;
-
-force(:,:,1) = fx;
-force(:,:,2) = fy;
+%fx = (-1.0).*fx;
+%fy = (-1.0).*fy;
+force = struct();
+force.x = fx;
+force.y = fy;
 end

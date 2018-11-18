@@ -43,20 +43,20 @@ for i=2:xLen;
         xPos = [x(i), y(j)]; % obtain position
         xComp = xPos(1);
         yComp = xPos(2);
-        TemplateXComp = ceil(xComp - Ux(xComp));
-        TemplateYComp = ceil(yComp - Uy(yComp));
+        TemplateXComp = ceil(real(ceil(xComp - Ux(xComp))));
+        TemplateYComp = ceil(real(ceil(yComp - Uy(yComp))));
         % compute the partial of T with respect to x and Y by Forward Difference
         % Scheme
-        dTdx = (double(Template(TemplateXComp+1,TemplateYComp)) - double(Template(TemplateXComp-1,TemplateYComp))) / dx; % Partial of T with respect to x 
-        dTdy = (double(Template(TemplateXComp,TemplateYComp+1)) - double(Template(TemplateXComp,TemplateYComp-1))) / dy; % Partial of T with respect to y
+        dTdx = (double(Template.x(TemplateXComp+1,TemplateYComp)) - double(Template.x(TemplateXComp-1,TemplateYComp))) / dx; % Partial of T with respect to x 
+        dTdy = (double(Template.y(TemplateXComp,TemplateYComp+1)) - double(Template.y(TemplateXComp,TemplateYComp-1))) / dy; % Partial of T with respect to y
         % Compute the actual force field by taking the difference between
         % the template image and the source multiplied by the computed
         % gradient
-        fx(i,j) = -alpha*(double(Template(TemplateXComp,TemplateYComp)) - double(Source(i,yComp))) * dTdx;
-		fy(i,j) = -alpha*(double(Template(TemplateXComp,TemplateYComp)) - double(Source(i,yComp))) * dTdy;
+        fx(i,j) = -alpha*(double(Template.x(TemplateXComp,TemplateYComp)) - double(Source(TemplateXComp,TemplateYComp))) * dTdx;
+		fy(i,j) = -alpha*(double(Template.y(TemplateXComp,TemplateYComp)) - double(Source(TemplateXComp,TemplateYComp))) * dTdy;
         
         % TODO : FIX THIS LATER
-        Sample = Template - Source;
+        Sample = Template.x - Source;
         
         
         if(method == "QN")
