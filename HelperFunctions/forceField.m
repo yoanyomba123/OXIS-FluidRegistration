@@ -45,6 +45,7 @@ for i=2:xLen;
         yComp = xPos(2);
         TemplateXComp = ceil(real(ceil(xComp - Ux(xComp))));
         TemplateYComp = ceil(real(ceil(yComp - Uy(yComp))));
+        
         % compute the partial of T with respect to x and Y by Forward Difference
         % Scheme
         dTdx = (double(Template.x(TemplateXComp+1,TemplateYComp)) - double(Template.x(TemplateXComp-1,TemplateYComp))) / dx; % Partial of T with respect to x 

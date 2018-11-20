@@ -15,7 +15,7 @@ Vx = V.x; Ux = U.x;
 Vy = V.y; Uy = U.y;
 
 % pad Arrays
-Vx = padarray(Vx, [1,1]); Vy = padarray(Vy, [1,1]);
+Vx =padarray(Vx, [1,1]);  Vy = padarray(Vy, [1,1]);
 Ux = padarray(Ux, [1,1]); Uy = padarray(Uy, [1,1]);
 
 maxPerturb = 0.0;

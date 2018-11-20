@@ -5,22 +5,29 @@
 %   The purpose of this script is to implement a fluid registration model
 %   in matlab. The Registration model makes use of the Eularian reference
 %   frame and uses the sum of square difference as a cost function.
-%% Clear Up Workspace
+
+% Clear Up Workspace
 clc; clear; close all;
 
-%% Add all paths to current workspace recursively
+% Add all paths to current workspace recursively
 currentFolder = pwd;
 addpath(genpath(currentFolder));
 
 %% Load In Images Into Workspace
 [Template, Source] = loadImages("Data");
+
+Template = mat2gray(Template);
+Source = mat2gray(Source);
+
+Template = imrotate(Template,-15,'bilinear','crop');
+%Template  =  imrotate(Source,-1,'bilinear','crop');
 templateSourceDiff = Template - Source;
- 
+
 % display and visualize both images
-%figure; imagesc([Template, Source]);
+figure; imshow([Template, Source]);
 
 % display and visualize difference between both images
-%figure; imshowpair(Template, Source, "diff");
+% figure; imshowpair(Template, Source, "diff");
 
 %% Define Initial Conditions 
 
@@ -46,13 +53,13 @@ tolerance.deformationTolerance = 0.5;
 tolerance.jacobainTolerance = 0.025;
 tolerance.distanceTolerance = 1e-5;
 
-maxIter = 20;
+maxIter = 2;
 
 % grid definition
 [rows, cols] = size(Template);
 gridObject = struct();
-gridObject.numXPoints = ceil(rows/10);
-gridObject.numYPoints = ceil(cols/10);
+gridObject.numXPoints = 100;
+gridObject.numYPoints = 100;
 gridObject.grid = struct();
 
 % generate points that are not on the boundary of the image
@@ -105,7 +112,6 @@ V = struct();
 Jacobian = struct();
 deltalU = struct();
 %% Obtain True Template
-sampleTemplate = gridObject.grid.x;
 for i = 2:length(x)
     for j = 2:length(y)
         sampleTemplate(i,j) = Template(x(i), y(j));
@@ -114,10 +120,16 @@ for i = 2:length(x)
 end
 gridObject.sampleTemplate = sampleTemplate;
 gridObject.sampleSource = sampleSource;
-
+figure; imshow([Template, Source]);
+title("Template (Rotated) | Source")
+% figure; imagesc([sampleSource]);
+% title("Source Image");
+% figure; imagesc([sampleTemplate]);
+% title("Template Image");
 %% Algorithm
 wk = struct();
-for i = 1:maxIter;
+displacementVector = cell(1, maxIter);
+for i = 1:1;
     % perform 2D interpolation
     % turn this into a function
     wRegrid.x = interp2(yQ{regridCounter}.x, gridObject.grid.x - U.x);
@@ -142,7 +154,7 @@ for i = 1:maxIter;
     
     drawnow
     % visualize the force field on the image
-    visualize(force.x, force.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate - gridObject.sampleSource);
+    visualize(force.x, force.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
     disp("Displaying force fields");
     pause(1);
     
@@ -153,8 +165,8 @@ for i = 1:maxIter;
     
     A.x = conv2(gridObject.sampleTemplate, Sx, 'same');
     A.y = conv2(gridObject.sampleTemplate, Sy, 'same');
-    A.FFTx = fftMatOperator .* A.x .* fftMatInvOperator;
-    A.FFTy = fftMatOperator .* A.y .* fftMatInvOperator;
+    A.FFTx = real(fftMatOperator .* A.x .* fftMatInvOperator);
+    A.FFTy = real(fftMatOperator .* A.y .* fftMatInvOperator);
     
     Dx = pinv(A.FFTx);
     Dy = pinv(A.FFTy);
@@ -162,14 +174,17 @@ for i = 1:maxIter;
     V.x = Dx .* force.x;
     V.y = Dy .* force.y;
     % visualize the velocity field on the image
-    visualize(V.x, V.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate - gridObject.sampleSource);
+    visualize(V.x, V.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
     disp("Displaying Velocity Vector fields");
     pause(1);
     
     U = computePertubationAndUpdateDisplacement(gridObject, U, V, tolerance);
-    
-%     Jacobian.x = diff(U.x);
-%     Jacobian.y = diff(U.y);
+%     displacementVector{i} = U;
+%     
+%     [Jacobianx, Jacobiany] = gradient(U.x*1000);
+%     [Jacobianyx, Jacobianyy] = gradient(U.y*1000);
+%     Jacobian.x = Jacobianx;
+%     Jacobian.y = Jacobiany;
 %     minJacobian = min(det(Jacobian.x), det(Jacobian.y));
 %     
 %     if(abs(minJacobian) < tolerance.jacobainTolerance)
@@ -178,6 +193,8 @@ for i = 1:maxIter;
 %         regridEntity.x = wK{i}.x + U.x;
 %         regridEntity.y = wK{i}.y + U.y;
 %         yQ{regridCounter} = regridEntity;
+%         U.x = U.x .* 0;
+%         U.y = U.y .* 0;
 %     else
 %         deltaU.x = Jacobian.x .* V.x;
 %         deltaU.y = Jacobian.y .* V.y;
@@ -187,20 +204,58 @@ for i = 1:maxIter;
 %         U.x = U.x + deltaT .* deltaU.x;
 %         U.y = U.y + deltaT .* deltaU.y;
 %     end
-    visualize(U.x, U.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate - gridObject.sampleSource);
-    disp("Displaying Velocity Vector fields");
+    visualize(U.x, U.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
+    disp("Displaying Displacement Vector fields");
     pause(1);
     
 end
+%%
+U.x = (wK{i}.x + real(U.x));
+U.y = wK{i}.y + real(U.y);
 
-U.x = wK{i}.x + U.x;
-U.y = wK{i}.y + U.y;
+displacement(:,:,1) = U.x;
+displacement(:,:,2) = U.y;
 
-tOut(:,:,1) = interp2(Template,  gridObject.grid.x - U.x);
-tOut(:,:,2) = interp2(Template, gridObject.grid.y - U.y);
+output = imwarp(sampleTemplate, displacement);
+figure; imshow([output,sampleTemplate]);
+title("Registered Image vs Template");
 
-for i = 2: length(U.x)
-    for j = 2: length(U.y);
-        output(i, j) = Template(x(i), y(j)) + U.x(i, j)+ U.y(i, j) ;
+figure; imshowpair(output, sampleSource,"ColorChannels", 'red-cyan');
+title("difference between the Registered Image amd Source");
+
+figure; imshowpair(output, sampleTemplate,"ColorChannels", 'red-cyan');
+title("difference between the Output Image amd Template");
+
+
+RegisteredImage = zeros(length(U.x), length(U.y));
+
+for i = 1: length(U.x)
+    for j =1: length(U.y)     
+        x_hat = U.x(i,j);
+        y_hat = U.y(i,j);
+        x_def = ceil(i + x_hat);
+        y_def = ceil(j + y_hat);
+        if(x_def > 0 && y_def > 0)
+           RegisteredImage(x_def, y_def) = sampleTemplate(i,j);
+        end
     end
 end
+
+RegisteredImage = RegisteredImage(1:end-1,1:end-1);
+figure; imagesc(RegisteredImage);
+figure; imagesc(sampleTemplate);
+
+
+
+% figure; imagesc([RegisteredImage sampleTemplate]);
+% figure; imshowpair(RegisteredImage, sampleSource,'ColorChannels','red-cyan');
+figure; imshowpair(RegisteredImage, sampleTemplate,'ColorChannels','red-cyan');
+
+% tOut(:,:,1) = interp2(Template,  gridObject.grid.x - U.x);
+% tOut(:,:,2) = interp2(Template, gridObject.grid.y - U.y);
+% 
+% for i = 2: length(U.x)
+%     for j = 2: length(U.y);
+%         output(i, j) = Template(x(i), y(j)) + U.x(i, j)+ U.y(i, j) ;
+%     end
+% end
