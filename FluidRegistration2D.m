@@ -51,7 +51,7 @@ stencil.S21 = stencil.S12';
 tolerance = struct();
 tolerance.deformationTolerance = 0.5;
 tolerance.jacobainTolerance = 0.025;
-tolerance.distanceTolerance = 1e-5;
+tolerance.distanceTolerance = 1e-1;
 
 maxIter = 2;
 

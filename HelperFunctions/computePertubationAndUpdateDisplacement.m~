@@ -14,16 +14,23 @@ dy2 = dy * 2.0;
 Vx = V.x; Ux = U.x;
 Vy = V.y; Uy = U.y;
 
+% pad Arrays
+Vx =padarray(Vx, [1,1]);  Vy = padarray(Vy, [1,1]);
+Ux = padarray(Ux, [1,1]); Uy = padarray(Uy, [1,1]);
+
 maxPerturb = 0.0;
 
-for i = 2:length(Vx)-1
-    for j= 2:length(Vy)-1
+for i = 2:length(Vx)-2
+    for j= 2:length(Vy)-2
         dUx_dx = (Ux(i+1, j) - Ux(i-1, j))/dx2;
+        dUx_dy = (Ux(i, j+1) - Ux(i, j-1))/dy2;
+
         
         dUy_dy = (Uy(i, j+1) - Uy(i, j-1))/dy2;
+        dUy_dx = (Uy(i+1, j) - Uy(i-1, j))/dx2;
 
-        perturbation.x(i, j) = Vx(i, j) - Vx(i,j).*dUx_dx - Vy(i, j).*dUy_dy; 
-        perturbation.y(i, j) = Vy(i, j) - Vx(i,j).*dUx_dx - Vy(i, j).*dUy_dy; 
+        perturbation.x(i, j) = Vx(i, j) - (Vx(i,j).* dUx_dx)  - (Vy(i, j) .* dUy_dx) ; 
+        perturbation.y(i, j) = Vy(i, j) - (Vy(i, j).* dUy_dy) -  Vx(i,j) .dUx_dy); 
         
         perturbL2Norm = sqrt(perturbation.x(i, j) .^2 +  perturbation.y(i, j) .^ 2);
         

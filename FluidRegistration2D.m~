@@ -51,7 +51,7 @@ stencil.S21 = stencil.S12';
 tolerance = struct();
 tolerance.deformationTolerance = 0.5;
 tolerance.jacobainTolerance = 0.025;
-tolerance.distanceTolerance = 1e-5;
+tolerance.distanceTolerance = 1e-1;
 
 maxIter = 2;
 
@@ -129,7 +129,7 @@ title("Template (Rotated) | Source")
 %% Algorithm
 wk = struct();
 displacementVector = cell(1, maxIter);
-for i = 1:6;
+for i = 1:1;
     % perform 2D interpolation
     % turn this into a function
     wRegrid.x = interp2(yQ{regridCounter}.x, gridObject.grid.x - U.x);

@@ -23,11 +23,14 @@ maxPerturb = 0.0;
 for i = 2:length(Vx)-2
     for j= 2:length(Vy)-2
         dUx_dx = (Ux(i+1, j) - Ux(i-1, j))/dx2;
+        dUx_dy = (Ux(i, j+1) - Ux(i, j-1))/dy2;
+
         
         dUy_dy = (Uy(i, j+1) - Uy(i, j-1))/dy2;
+        dUy_dx = (Uy(i+1, j) - Uy(i-1, j))/dx2;
 
-        perturbation.x(i, j) = Vx(i, j) - Vx(i,j).*dUx_dx - Vy(i, j).*dUy_dy; 
-        perturbation.y(i, j) = Vy(i, j) - Vx(i,j).*dUx_dx - Vy(i, j).*dUy_dy; 
+        perturbation.x(i, j) = Vx(i, j) - (Vx(i,j).* dUx_dx)  - (Vy(i, j) .* dUy_dx); 
+        perturbation.y(i, j) = Vy(i, j) - (Vy(i, j).* dUy_dy) - (Vx(i,j) .* dUx_dy); 
         
         perturbL2Norm = sqrt(perturbation.x(i, j) .^2 +  perturbation.y(i, j) .^ 2);
         
