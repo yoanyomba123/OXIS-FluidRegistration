@@ -43,7 +43,9 @@ and serves as a reference for any one currently performing research in the
 field.
 
 
-
+# TODO 
+1. Implement Linear Interpolation For Reference frame mapping
+2. Work On Parameter Optimization
 
 
 

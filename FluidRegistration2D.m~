@@ -13,14 +13,14 @@ clc; clear; close all;
 currentFolder = pwd;
 addpath(genpath(currentFolder));
 
-%% Load In Images Into Workspace
+% Load In Images Into Workspace
 [Template, Source] = loadImages("Data");
 
 Template =  Template;
 Source =  Source;
 
 % Template = imrotate(Template,-15,'bilinear','crop');
-%Template  =  imrotate(Source,-1,'bilinear','crop');
+Template  =  imrotate(Source,-1,'bilinear','crop');
 % templateSourceDiff = Template - Source;
 
 % display and visualize both images
@@ -34,7 +34,7 @@ Source =  Source;
 % params
 params = struct();
 params.mu = 1;
-params.lambda = 1;
+params.lambda = 2;
 
 % define stencils
 stencil = struct();
@@ -51,15 +51,15 @@ stencil.S21 = stencil.S12';
 tolerance = struct();
 tolerance.deformationTolerance = 100;
 tolerance.jacobianTolerance = 0.25;
-tolerance.distanceTolerance = 200;
+tolerance.distanceTolerance = 20;
 
-maxIter = 6;
+maxIter = 60;
 
 % grid definition
 [rows, cols] = size(Template);
 gridObject = struct();
-gridObject.numXPoints = 500;
-gridObject.numYPoints = 1000;
+gridObject.numXPoints = 100;
+gridObject.numYPoints = 100;
 gridObject.grid = struct();
 
 % generate points that are not on the boundary of the image
@@ -111,7 +111,7 @@ A = struct();
 V = struct();
 Jacobian = struct();
 deltalU = struct();
-%% Obtain True Template
+% Obtain True Template
 for i = 2:length(x)
     for j = 2:length(y)
         sampleTemplate(i,j) = Template(x(i), y(j));
@@ -126,7 +126,7 @@ title("Template (Rotated) | Source")
 % title("Source Image");
 % figure; imagesc([sampleTemplate]);
 % title("Template Image");
-%% Algorithm
+% Algorithm
 wk = struct();
 displacementVector = cell(1, maxIter);
 for i = 1:maxIter;
@@ -202,14 +202,16 @@ for i = 1:maxIter;
     pause(1);
 end
 %%
-U.x = (wK{i}.x + real(U.x));
-U.y = (wK{i}.y + real(U.y));
+U.x =  (wK{i}.x + real(U.x));
+U.y =  (wK{i}.y + real(U.y));
+wRegrid.x = interp2(Template, gridObject.grid.x - U.x);
+wRegrid.y = interp2(yQ{regridCounter}.y, gridObject.grid.y - U.y);
 
 templateT = 0;
 templateInit = 0;
 for i = 1: length(U.x)
     for j = 1: length(U.y)
-        templateT(ceil(i + U.x(i, j)), ceil(j + U.y(i, j))) = Source(i, j); 
+        templateT(ceil(abs(i + U.x(i, j))), ceil(abs(j + U.y(i, j)))) = Source(i, j); 
         templateInit(i,j) = Source(i,j);
     end
 end

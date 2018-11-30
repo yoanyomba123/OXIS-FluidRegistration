@@ -202,19 +202,20 @@ for i = 1:maxIter;
     pause(1);
 end
 %%
-U.x = tolerance.distanceTolerance .* (wK{i}.x + real(U.x));
-U.y = tolerance.distanceTolerance .* (wK{i}.y + real(U.y));
+U.x =  (wK{i}.x + real(U.x));
+U.y =  (wK{i}.y + real(U.y));
+
 
 templateT = 0;
 templateInit = 0;
 for i = 1: length(U.x)
     for j = 1: length(U.y)
-        templateT(ceil(abs(i + U.x(i, j))), ceil(abs(j + U.y(i, j)))) = Source(i, j); 
-        templateInit(i,j) = Source(i,j);
+        Template(ceil(abs(i - U.x(i, j))), ceil(abs(j - U.y(i, j)))) = Template(i,j); 
+        TemplateInit(i,j) = Source(i,j);
     end
 end
 
-figure; imshowpair(templateT(1:end-1, 1:end-1), templateInit);
+figure; imshowpair(Template, Source);
 %%
 displacementfield(:,:,1) = X - U.x;
 displacementfield(:,:,2) = Y - U.y;
