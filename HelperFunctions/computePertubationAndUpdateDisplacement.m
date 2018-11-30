@@ -1,4 +1,4 @@
-function U = computePertubationAndUpdateDisplacement(gridObject, U, V, tolerance)
+function [perturbation, delta] = computePertubationAndUpdateDisplacement(gridObject, U, V, tolerance, regridCounter, wK, yQ, tK, iteration)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -19,6 +19,8 @@ Vx =padarray(Vx, [1,1]);  Vy = padarray(Vy, [1,1]);
 Ux = padarray(Ux, [1,1]); Uy = padarray(Uy, [1,1]);
 
 maxPerturb = 0.0;
+perturbL2Norm = 0.0;
+maxPertubation = 0.0;
 
 for i = 2:length(Vx)-2
     for j= 2:length(Vy)-2
@@ -32,19 +34,19 @@ for i = 2:length(Vx)-2
         perturbation.x(i, j) = Vx(i, j) - (Vx(i,j).* dUx_dx)  - (Vy(i, j) .* dUy_dx); 
         perturbation.y(i, j) = Vy(i, j) - (Vy(i, j).* dUy_dy) - (Vx(i,j) .* dUx_dy); 
         
-        perturbL2Norm = sqrt(perturbation.x(i, j) .^2 +  perturbation.y(i, j) .^ 2);
+        perturbL2Norm = (perturbation.x(i, j) .^2 +  perturbation.y(i, j) .^ 2);
+
+        if perturbL2Norm > maxPertubation && perturbL2Norm ~= 0
+            maxPertubation = perturbL2Norm;
+        end
         
-        if(perturbL2Norm <= maxDeformation && perturbL2Norm ~= 0)
-            maxPerturb = perturbL2Norm;
-        else
-            maxPerturb = maxDeformation;
+        if maxPertubation == 0.0
+           maxPertubation = perturbL2Norm;
         end
     end
 end
 
-dt = maxPerturb;
-U.x = U.x + perturbation.x .* dt;
-U.y = U.y + perturbation.y .* dt;
+delta = tolerance.deformationTolerance / maxPertubation;
 
 end
 

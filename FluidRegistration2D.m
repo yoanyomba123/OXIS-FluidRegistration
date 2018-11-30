@@ -13,28 +13,28 @@ clc; clear; close all;
 currentFolder = pwd;
 addpath(genpath(currentFolder));
 
-%% Load In Images Into Workspace
+% Load In Images Into Workspace
 [Template, Source] = loadImages("Data");
 
-Template = mat2gray(Template);
-Source = mat2gray(Source);
+Template =  Template;
+Source =  Source;
 
-Template = imrotate(Template,-15,'bilinear','crop');
-%Template  =  imrotate(Source,-1,'bilinear','crop');
-templateSourceDiff = Template - Source;
+% Template = imrotate(Template,-15,'bilinear','crop');
+Template  =  imrotate(Source,-1,'bilinear','crop');
+% templateSourceDiff = Template - Source;
 
 % display and visualize both images
-figure; imshow([Template, Source]);
+% figure; imagesc([Template, Source]);
 
 % display and visualize difference between both images
-% figure; imshowpair(Template, Source, "diff");
+ figure; imshowpair(Template, Source, "diff");
 
 %% Define Initial Conditions 
 
 % params
 params = struct();
 params.mu = 1;
-params.lambda = 1;
+params.lambda = 2;
 
 % define stencils
 stencil = struct();
@@ -49,11 +49,11 @@ stencil.S21 = stencil.S12';
 
 % tolerance definition
 tolerance = struct();
-tolerance.deformationTolerance = 0.5;
-tolerance.jacobainTolerance = 0.025;
-tolerance.distanceTolerance = 1e-1;
+tolerance.deformationTolerance = 100;
+tolerance.jacobianTolerance = 0.25;
+tolerance.distanceTolerance = 20;
 
-maxIter = 2;
+maxIter = 60;
 
 % grid definition
 [rows, cols] = size(Template);
@@ -72,8 +72,8 @@ gridObject.x = x;
 gridObject.y = y;
 gridObject.grid.x = X;
 gridObject.grid.y = Y;
-gridObject.dx = ceil(gridObject.rows/gridObject.numXPoints);
-gridObject.dy = ceil(gridObject.cols/gridObject.numYPoints);
+gridObject.dx = 3*ceil(gridObject.rows/gridObject.numXPoints);
+gridObject.dy = 3*ceil(gridObject.cols/gridObject.numYPoints);
 
 % initilaze displacement field
 U = struct();
@@ -111,7 +111,7 @@ A = struct();
 V = struct();
 Jacobian = struct();
 deltalU = struct();
-%% Obtain True Template
+% Obtain True Template
 for i = 2:length(x)
     for j = 2:length(y)
         sampleTemplate(i,j) = Template(x(i), y(j));
@@ -120,16 +120,16 @@ for i = 2:length(x)
 end
 gridObject.sampleTemplate = sampleTemplate;
 gridObject.sampleSource = sampleSource;
-figure; imshow([Template, Source]);
+figure; imagesc([Template, Source]);
 title("Template (Rotated) | Source")
 % figure; imagesc([sampleSource]);
 % title("Source Image");
 % figure; imagesc([sampleTemplate]);
 % title("Template Image");
-%% Algorithm
+% Algorithm
 wk = struct();
 displacementVector = cell(1, maxIter);
-for i = 1:1;
+for i = 1:maxIter;
     % perform 2D interpolation
     % turn this into a function
     wRegrid.x = interp2(yQ{regridCounter}.x, gridObject.grid.x - U.x);
@@ -140,10 +140,10 @@ for i = 1:1;
     tRegrid.x = interp2(Template, gridObject.grid.x - wRegrid.x - U.x);
     tRegrid.y = interp2(Template, gridObject.grid.y - wRegrid.y - U.y);
     tK{i} = tRegrid;
-    
+
     if(i > 1)
-       if((Source - tK{i-1}.x) <=  (Source - tK{i}.x).*tolerance.distanceTolerance & ...
-               (Source - tK{i-1}.x) <=  (Source - tK{i}.x).*tolerance.distanceTolerance)
+       if ((Source - tK{i-1}.x) - (Source - tK{i}.x)) <=  (Source - tK{i}.x).*tolerance.distanceTolerance | ...
+            ((Source - tK{i-1}.y) - (Source - tK{i}.y)) <=  (Source - tK{i}.y).*tolerance.distanceTolerance            
             exit;
        end
     end
@@ -177,47 +177,57 @@ for i = 1:1;
     visualize(V.x, V.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
     disp("Displaying Velocity Vector fields");
     pause(1);
-    
-    U = computePertubationAndUpdateDisplacement(gridObject, U, V, tolerance);
-%     displacementVector{i} = U;
-%     
-%     [Jacobianx, Jacobiany] = gradient(U.x*1000);
-%     [Jacobianyx, Jacobianyy] = gradient(U.y*1000);
-%     Jacobian.x = Jacobianx;
-%     Jacobian.y = Jacobiany;
-%     minJacobian = min(det(Jacobian.x), det(Jacobian.y));
-%     
-%     if(abs(minJacobian) < tolerance.jacobainTolerance)
-%         regridCounter = regridCounter+1;
-%         regridEntity = struct();
-%         regridEntity.x = wK{i}.x + U.x;
-%         regridEntity.y = wK{i}.y + U.y;
-%         yQ{regridCounter} = regridEntity;
-%         U.x = U.x .* 0;
-%         U.y = U.y .* 0;
-%     else
-%         deltaU.x = Jacobian.x .* V.x;
-%         deltaU.y = Jacobian.y .* V.y;
-%         % TODO LOOK INTO THIS
-%         delta = max(max(max(deltaU.x)), max(max(deltaU.y)));
-%         deltaT = min(1, tolerance.deformationTolerance/delta);
-%         U.x = U.x + deltaT .* deltaU.x;
-%         U.y = U.y + deltaT .* deltaU.y;
-%     end
+ 
+   [pertubation, delta] = computePertubationAndUpdateDisplacement(gridObject, U, V, tolerance, regridCounter, wK, yQ, tK, i);
+   regridBool = computeJacobian(gridObject, U, delta, pertubation, tolerance);
+   if regridBool == "false"
+        U.x = U.x + pertubation.x .* delta;
+        U.y = U.y + pertubation.y .* delta;
+   else
+        singularityCount = 0;
+        while regridBool == "True"
+           [regridCounter, wK, U, yQ, tK, pertubation, delta, iteration] = perfromRegridding(gridObject, regridBool, regridCounter, wK, U, yQ, tK, pertubation, delta, i, Template);
+           [pertubation, delta] = computePertubationAndUpdateDisplacement(gridObject, U, V, tolerance, regridCounter, wK, yQ, tK, i);
+           regridBool = computeJacobian(gridObject, U, delta, pertubation, tolerance);
+           singularityCount = singularityCount + 1;
+           
+           if(singularityCount > 5)
+               exit();
+           end
+        end
+   end
+  
     visualize(U.x, U.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
     disp("Displaying Displacement Vector fields");
     pause(1);
-    
 end
 %%
-U.x = (wK{i}.x + real(U.x));
-U.y = wK{i}.y + real(U.y);
+U.x = tolerance.distanceTolerance .* (wK{i}.x + real(U.x));
+U.y = tolerance.distanceTolerance .* (wK{i}.y + real(U.y));
 
-displacement(:,:,1) = U.x;
-displacement(:,:,2) = U.y;
+templateT = 0;
+templateInit = 0;
+for i = 1: length(U.x)
+    for j = 1: length(U.y)
+        templateT(ceil(abs(i + U.x(i, j))), ceil(abs(j + U.y(i, j)))) = Source(i, j); 
+        templateInit(i,j) = Source(i,j);
+    end
+end
 
-output = imwarp(sampleTemplate, displacement);
-figure; imshow([output,sampleTemplate]);
+figure; imshowpair(templateT(1:end-1, 1:end-1), templateInit);
+%%
+displacementfield(:,:,1) = X - U.x;
+displacementfield(:,:,2) = Y - U.y;
+
+figure;plot(displacementfield(:,:,1),displacementfield(:,:,2)); hold on;
+
+visualize(U.x, U.y, displacementfield(:,:,1), displacementfield(:,:,2), gridObject.sampleTemplate);
+disp("Displaying Displacement Vector fields");
+pause(1);
+
+%%
+output = imwarp(sampleTemplate, displacementfield);
+figure; imshowpair(output,sampleTemplate);
 title("Registered Image vs Template");
 
 figure; imshowpair(output, sampleSource,"ColorChannels", 'red-cyan');
