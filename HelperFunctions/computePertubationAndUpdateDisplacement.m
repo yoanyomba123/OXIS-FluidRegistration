@@ -46,7 +46,7 @@ for i = 2:length(Vx)-2
     end
 end
 
-delta = tolerance.deformationTolerance / maxPertubation;
+delta = tolerance.deformationTolerance / maxPertubation
 
 end
 

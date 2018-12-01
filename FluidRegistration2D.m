@@ -20,15 +20,15 @@ Template =  Template;
 Source =  Source;
 
 % Template = imrotate(Template,-15,'bilinear','crop');
-Template  =  imrotate(Source,-1,'bilinear','crop');
+% Template  =  imrotate(Template,-10,'bilinear','crop');
 % templateSourceDiff = Template - Source;
 
 % display and visualize both images
 % figure; imagesc([Template, Source]);
 
 % display and visualize difference between both images
- figure; imshowpair(Template, Source, "diff");
-
+ figure; imshowpair(Template, Source);
+maxdiff = max(max(Template - Source))
 %% Define Initial Conditions 
 
 % params
@@ -49,17 +49,17 @@ stencil.S21 = stencil.S12';
 
 % tolerance definition
 tolerance = struct();
-tolerance.deformationTolerance = 100;
+tolerance.deformationTolerance = 500;
 tolerance.jacobianTolerance = 0.25;
-tolerance.distanceTolerance = 20;
+tolerance.distanceTolerance = 500;
 
-maxIter = 60;
+maxIter = 10;
 
 % grid definition
 [rows, cols] = size(Template);
 gridObject = struct();
-gridObject.numXPoints = 100;
-gridObject.numYPoints = 100;
+gridObject.numXPoints = 500;
+gridObject.numYPoints = 500;
 gridObject.grid = struct();
 
 % generate points that are not on the boundary of the image
@@ -129,16 +129,20 @@ title("Template (Rotated) | Source")
 % Algorithm
 wk = struct();
 displacementVector = cell(1, maxIter);
-for i = 1:maxIter;
+%%
+for i = 1:2;
+    % store prior tolerance value for optimization
+    deformationDistTolprevious = tolerance.deformationTolerance;
+    
     % perform 2D interpolation
     % turn this into a function
-    wRegrid.x = interp2(yQ{regridCounter}.x, gridObject.grid.x - U.x);
-    wRegrid.y = interp2(yQ{regridCounter}.y, gridObject.grid.y - U.y);
+    wRegrid.x = interp2(yQ{regridCounter}.x, gridObject.grid.x + U.x,'linear');
+    wRegrid.y = interp2(yQ{regridCounter}.y, gridObject.grid.y + U.y, 'linear');
     wK{i} = wRegrid;
     
     % turn this into a function
-    tRegrid.x = interp2(Template, gridObject.grid.x - wRegrid.x - U.x);
-    tRegrid.y = interp2(Template, gridObject.grid.y - wRegrid.y - U.y);
+    tRegrid.x = interp2(Template , gridObject.grid.x + wRegrid.x + U.x, 'linear');
+    tRegrid.y = interp2(Template, gridObject.grid.y + wRegrid.y + U.y, 'linear');
     tK{i} = tRegrid;
 
     if(i > 1)
@@ -156,7 +160,7 @@ for i = 1:maxIter;
     % visualize the force field on the image
     visualize(force.x, force.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
     disp("Displaying force fields");
-    pause(1);
+    pause(3);
     
     % obtain V
     % Turn this into a function
@@ -171,12 +175,12 @@ for i = 1:maxIter;
     Dx = pinv(A.FFTx);
     Dy = pinv(A.FFTy);
     
-    V.x = Dx .* force.x;
-    V.y = Dy .* force.y;
+    V.x = (Dx) .* force.x;
+    V.y = (Dy) .* force.y;
     % visualize the velocity field on the image
     visualize(V.x, V.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
     disp("Displaying Velocity Vector fields");
-    pause(1);
+    pause(3);
  
    [pertubation, delta] = computePertubationAndUpdateDisplacement(gridObject, U, V, tolerance, regridCounter, wK, yQ, tK, i);
    regridBool = computeJacobian(gridObject, U, delta, pertubation, tolerance);
@@ -199,26 +203,47 @@ for i = 1:maxIter;
   
     visualize(U.x, U.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
     disp("Displaying Displacement Vector fields");
-    pause(1);
+    pause(3);
+    
+    % apply the deformation to template
+    %[movingRegistered]= imwarp(Template,diss);
+    % obtain maximal difference 
+    %diffImage = (movingRegistered - gridObject.sampleSource);
+    % need to fix this ( find the derivative of the difference with respect
+    % to the tolerance
+%     [gx, gy] = gradient(double(diffImage));
+%     [gxx, gxy] = gradient(gx);
+%     [gxy, gyy] = gradient(gy);
+    
+    
 end
 %%
-U.x =  (wK{i}.x + real(U.x));
-U.y =  (wK{i}.y + real(U.y));
+U.x =  (wK{i}.x + real(ceil(U.x)));
+U.y =  (wK{i}.y + real(ceil(U.y)));
 
+field(:,:,1) = ceil(X + U.x);
+field(:,:,2) = ceil(Y + U.y);
 
+%Tout = imwarp(Template, field);
+x = x+1;
+y = y+1;
 templateT = 0;
 templateInit = 0;
+SourceGrid = 0;
 for i = 1: length(U.x)
     for j = 1: length(U.y)
-        Template(ceil(abs(i - U.x(i, j))), ceil(abs(j - U.y(i, j)))) = Template(i,j); 
-        TemplateInit(i,j) = Source(i,j);
+        TemplateT(ceil(abs(x(i) + U.x(i, j))), ceil(abs(y(j) + U.y(i, j)))) = Template(x(i),y(j)); 
+        TemplateInit(x(i),y(j)) = Template(x(i),y(j));
+        SourceGrid(x(i),y(j)) = Source(x(i),y(j));
     end
 end
 
-figure; imshowpair(Template, Source);
+figure; imshowpair(TemplateInit, SourceGrid,'ColorChannels', 'red-cyan');
+figure; imshowpair(TemplateT, SourceGrid, "diff");
+
 %%
-displacementfield(:,:,1) = X - U.x;
-displacementfield(:,:,2) = Y - U.y;
+displacementfield(:,:,1) = ceil(X + U.x);
+displacementfield(:,:,2) = ceil(Y + U.y);
 
 figure;plot(displacementfield(:,:,1),displacementfield(:,:,2)); hold on;
 
