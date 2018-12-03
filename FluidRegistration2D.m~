@@ -19,12 +19,12 @@ addpath(genpath(currentFolder));
 Template =  Template;
 Source =  Source;
 
-% Template = imrotate(Template,-15,'bilinear','crop');
+Template = imrotate(Template,-15,'bilinear','crop');
 % Template  =  imrotate(Template,-10,'bilinear','crop');
 % templateSourceDiff = Template - Source;
 
 % display and visualize both images
-% figure; imagesc([Template, Source]);
+figure; imagesc([Template, Source]);
 
 % display and visualize difference between both images
  figure; imshowpair(Template, Source);
@@ -34,7 +34,7 @@ maxdiff = max(max(Template - Source))
 % params
 params = struct();
 params.mu = 1;
-params.lambda = 2;
+params.lambda = 1;
 
 % define stencils
 stencil = struct();
@@ -49,17 +49,18 @@ stencil.S21 = stencil.S12';
 
 % tolerance definition
 tolerance = struct();
-tolerance.deformationTolerance = 200;
+tolerance.deformationTolerance = 100;
 tolerance.jacobianTolerance = 0.25;
-tolerance.distanceTolerance = 200;
+tolerance.distanceTolerance = 100;
+tolerance.delta = 0.01;
 
-maxIter = 10;
+maxIter = 100;
 
 % grid definition
 [rows, cols] = size(Template);
 gridObject = struct();
-gridObject.numXPoints = 200;
-gridObject.numYPoints = 200;
+gridObject.numXPoints = 100;
+gridObject.numYPoints = 100;
 gridObject.grid = struct();
 
 % generate points that are not on the boundary of the image
@@ -72,8 +73,8 @@ gridObject.x = x;
 gridObject.y = y;
 gridObject.grid.x = X;
 gridObject.grid.y = Y;
-gridObject.dx = 3*ceil(gridObject.rows/gridObject.numXPoints);
-gridObject.dy = 3*ceil(gridObject.cols/gridObject.numYPoints);
+gridObject.dx = 1*ceil(gridObject.rows/gridObject.numXPoints);
+gridObject.dy = 1*ceil(gridObject.cols/gridObject.numYPoints);
 
 % initilaze displacement field
 U = struct();
@@ -130,7 +131,9 @@ title("Template (Rotated) | Source")
 wk = struct();
 displacementVector = cell(1, maxIter);
 %%
-for i = 1:maxIter;
+priorDelta = 0;
+i = 1;
+while 1;
     % store prior tolerance value for optimization
     deformationDistTolprevious = tolerance.deformationTolerance;
     
@@ -145,22 +148,21 @@ for i = 1:maxIter;
     tRegrid.y = interp2(Template, gridObject.grid.y + wRegrid.y + U.y, 'linear');
     tK{i} = tRegrid;
 
-    if(i > 1)
-       if ((Source - tK{i-1}.x) - (Source - tK{i}.x)) <=  (Source - tK{i}.x).*tolerance.distanceTolerance | ...
-            ((Source - tK{i-1}.y) - (Source - tK{i}.y)) <=  (Source - tK{i}.y).*tolerance.distanceTolerance            
-            exit;
-       end
-    end
+%     if(i > 1)
+%        if max(max((Source - tK{i-1}.x) - (Source - tK{i}.y))) <=  max(max((Source - tK{i}.x).*tolerance.distanceTolerance)) | ...
+%             max(max((Source - tK{i-1}.y) - (Source - tK{i}.y))) <=  max(max((Source - tK{i}.y).*tolerance.distanceTolerance))            
+%             return;
+%        end
+%     end
     
-    % make a change here and pass in tK{i} instead
-    % TODO NEED TO FIX THIS
+    % Minimization is performed in the forcefield function
     force = forceField(tK{i}, Source, U, gridObject, "none");
     
     drawnow
     % visualize the force field on the image
     visualize(force.x, force.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
     disp("Displaying force fields");
-    pause(3);
+    pause(2);
     
     % obtain V
     % Turn this into a function
@@ -169,20 +171,27 @@ for i = 1:maxIter;
     
     A.x = conv2(gridObject.sampleTemplate, Sx, 'same');
     A.y = conv2(gridObject.sampleTemplate, Sy, 'same');
-    A.FFTx = real(fftMatOperator .* A.x .* fftMatInvOperator);
-    A.FFTy = real(fftMatOperator .* A.y .* fftMatInvOperator);
+    A.FFTx = fft2(A.x);%real(fftMatOperator .* A.x .* fftMatInvOperator);
+    A.FFTy = fft2(A.y); %real(fftMatOperator .* A.y .* fftMatInvOperator);
     
     Dx = pinv(A.FFTx);
     Dy = pinv(A.FFTy);
     
-    V.x = Dx .* force.x;
-    V.y = Dy .* force.y;
+    V.x = (Dx) .* force.x;
+    V.y = (Dy) .* force.y;
+    
     % visualize the velocity field on the image
     visualize(V.x, V.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
     disp("Displaying Velocity Vector fields");
-    pause(3);
+    pause(2);
  
    [pertubation, delta] = computePertubationAndUpdateDisplacement(gridObject, U, V, tolerance, regridCounter, wK, yQ, tK, i);
+   
+   % terminating condition
+   if abs(delta - priorDelta)/priorDelta < tolerance.delta | i > maxIter
+       return
+   end
+   
    regridBool = computeJacobian(gridObject, U, delta, pertubation, tolerance);
    if regridBool == "false"
         U.x = U.x + pertubation.x .* delta;
@@ -203,7 +212,8 @@ for i = 1:maxIter;
   
     visualize(U.x, U.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
     disp("Displaying Displacement Vector fields");
-    pause(3);
+    pause(2);
+
     
     % apply the deformation to template
     %[movingRegistered]= imwarp(Template,diss);
@@ -214,31 +224,36 @@ for i = 1:maxIter;
 %     [gx, gy] = gradient(double(diffImage));
 %     [gxx, gxy] = gradient(gx);
 %     [gxy, gyy] = gradient(gy);
-    
-    
+    priorDelta = delta;
+    i = i +1;
 end
 %%
-U.x =  (wK{i}.x + real(U.x));
-U.y =  (wK{i}.y + real(U.y));
+U.x =  (wK{i}.x + real(ceil(U.x)));
+U.y =  (wK{i}.y + real(ceil(U.y)));
 
-field(:,:,1) = U.x;
-field(:,:,2) = U.y;
+field(:,:,1) = ceil(X + U.x);
+field(:,:,2) = ceil(Y + U.y);
 
 %Tout = imwarp(Template, field);
-
+x = x+1;
+y = y+1;
 templateT = 0;
 templateInit = 0;
+SourceGrid = 0;
 for i = 1: length(U.x)
     for j = 1: length(U.y)
-        TemplateT(ceil(abs(i + U.x(i, j))), ceil(abs(j + U.y(i, j)))) = Template(i,j); 
-        TemplateInit(i,j) = Source(i,j);
+        TemplateT(ceil(abs(x(i) + U.x(i, j))), ceil(abs(y(j) + U.y(i, j)))) = Template(x(i),y(j)); 
+        TemplateInit(x(i),y(j)) = Template(x(i),y(j));
+        SourceGrid(x(i),y(j)) = Source(x(i),y(j));
     end
 end
 
-figure; imshowpair(TemplateT, Source, "diff");
+figure; imshowpair(TemplateInit, SourceGrid,'ColorChannels', 'red-cyan');
+figure; imshowpair(TemplateT, SourceGrid, 'ColorChannels', 'red-cyan');
+
 %%
-displacementfield(:,:,1) = X - U.x;
-displacementfield(:,:,2) = Y - U.y;
+displacementfield(:,:,1) = ceil(X + U.x);
+displacementfield(:,:,2) = ceil(Y + U.y);
 
 figure;plot(displacementfield(:,:,1),displacementfield(:,:,2)); hold on;
 
