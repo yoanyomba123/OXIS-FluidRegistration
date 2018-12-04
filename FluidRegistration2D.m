@@ -49,18 +49,18 @@ stencil.S21 = stencil.S12';
 
 % tolerance definition
 tolerance = struct();
-tolerance.deformationTolerance = 100;
+tolerance.deformationTolerance = 0.01;
 tolerance.jacobianTolerance = 0.25;
 tolerance.distanceTolerance = 100;
-tolerance.delta = 0.01;
+tolerance.delta = 0.005;
 
 maxIter = 100;
 
 % grid definition
 [rows, cols] = size(Template);
 gridObject = struct();
-gridObject.numXPoints = 100;
-gridObject.numYPoints = 100;
+gridObject.numXPoints = 250;
+gridObject.numYPoints = 250;
 gridObject.grid = struct();
 
 % generate points that are not on the boundary of the image
@@ -139,14 +139,13 @@ while 1;
     
     % perform 2D interpolation
     % turn this into a function
-    wRegrid.x = interp2(yQ{regridCounter}.x, gridObject.grid.x + U.x,'linear');
-    wRegrid.y = interp2(yQ{regridCounter}.y, gridObject.grid.y + U.y, 'linear');
+    wRegrid.x = interp2(yQ{regridCounter}.x,gridObject.grid.x + U.x,'linear');
+    wRegrid.y =  interp2(yQ{regridCounter}.y,gridObject.grid.y + U.y,'linear');
     wK{i} = wRegrid;
     
-    % turn this into a function
-    tRegrid.x = interp2(Template , gridObject.grid.x + wRegrid.x + U.x, 'linear');
-    tRegrid.y = interp2(Template, gridObject.grid.y + wRegrid.y + U.y, 'linear');
-    tK{i} = tRegrid;
+    tRegrid.x = gridObject.grid.x + wRegrid.x + U.x;
+    tRegrid.y = gridObject.grid.y + wRegrid.y + U.y;
+    tK{i} = performLinearInterpolation(Template,tRegrid, gridObject);
 
 %     if(i > 1)
 %        if max(max((Source - tK{i-1}.x) - (Source - tK{i}.y))) <=  max(max((Source - tK{i}.x).*tolerance.distanceTolerance)) | ...
@@ -188,7 +187,7 @@ while 1;
    [pertubation, delta] = computePertubationAndUpdateDisplacement(gridObject, U, V, tolerance, regridCounter, wK, yQ, tK, i);
    
    % terminating condition
-   if abs(delta - priorDelta)/priorDelta < tolerance.delta | i > maxIter
+   if i > maxIter
        return
    end
    
@@ -205,7 +204,7 @@ while 1;
            singularityCount = singularityCount + 1;
            
            if(singularityCount > 5)
-               exit();
+               break;
            end
         end
    end
@@ -231,8 +230,8 @@ end
 U.x =  (wK{i}.x + real(ceil(U.x)));
 U.y =  (wK{i}.y + real(ceil(U.y)));
 
-field(:,:,1) = ceil(X + U.x);
-field(:,:,2) = ceil(Y + U.y);
+field(:,:,1) = ceil(X - U.x);
+field(:,:,2) = ceil(Y - U.y);
 
 %Tout = imwarp(Template, field);
 x = x+1;
@@ -247,8 +246,10 @@ for i = 1: length(U.x)
         SourceGrid(x(i),y(j)) = Source(x(i),y(j));
     end
 end
+tout = imwarp(Template, field);
 
-figure; imshowpair(TemplateInit, SourceGrid,'ColorChannels', 'red-cyan');
+
+figure; imshowpair(TemplateInit, SourceGrid,'ColorChannels', 'green-magenta');
 figure; imshowpair(TemplateT, SourceGrid, 'ColorChannels', 'red-cyan');
 
 %%

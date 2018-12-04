@@ -46,7 +46,7 @@ for i = 2:length(Vx)-2
     end
 end
 
-delta = tolerance.deformationTolerance / sqrt(max(max(perturbation.x)) ^ 2 +  max(max(perturbation.y)) ^ 2)
+delta = tolerance.deformationTolerance / (max(max(perturbation.x)) ^ 2 +  max(max(perturbation.y)) ^ 2);
 
 end
 
