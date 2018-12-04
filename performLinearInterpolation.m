@@ -13,8 +13,8 @@ Ty = Template;
 
 for i = 1: uVecXLen - 1 
     for j = 1: uVecYLen - 1
-        X(i, j) = abs(gridObject.grid.x(i) + 1 - uVecX(i,j));
-        Y(i, j) = abs(gridObject.grid.y(j) + 1 - uVecY(i,j));
+        X(i, j) = abs(gridObject.grid.x(i) + 1 + uVecX(i,j));
+        Y(i, j) = abs(gridObject.grid.y(j) + 1 + uVecY(i,j));
         
        
     end
@@ -28,8 +28,16 @@ for i = 1: uVecXLen - 1
             newY = 1;
         end
         
+        if newY >= length(Template)
+            newY = length(Template)-1;
+        end
+        
         if newX == 0
             newX = 1;
+        end
+        
+        if newX >= length(Template)
+            newX = length(Template) - 1;
         end
         
         Tx(i,j) = Template(newX,j) + ((Template(newX+1,j)-Template(newX,j))/dx) * (X(i,j)-newX);

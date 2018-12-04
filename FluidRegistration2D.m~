@@ -49,18 +49,18 @@ stencil.S21 = stencil.S12';
 
 % tolerance definition
 tolerance = struct();
-tolerance.deformationTolerance = 0.01;
+tolerance.deformationTolerance = 10;
 tolerance.jacobianTolerance = 0.25;
 tolerance.distanceTolerance = 100;
-tolerance.delta = 0.005;
+tolerance.delta = 0.00005;
 
 maxIter = 100;
 
 % grid definition
 [rows, cols] = size(Template);
 gridObject = struct();
-gridObject.numXPoints = 150;
-gridObject.numYPoints = 150;
+gridObject.numXPoints = 40;
+gridObject.numYPoints = 40;
 gridObject.grid = struct();
 
 % generate points that are not on the boundary of the image
@@ -130,7 +130,10 @@ title("Template (Rotated) | Source")
 % Algorithm
 wk = struct();
 displacementVector = cell(1, maxIter);
+x = x + 1;
+y = y + 1;
 %%
+figure;
 priorDelta = 0;
 i = 1;
 while 1;
@@ -146,6 +149,13 @@ while 1;
     tRegrid.x = gridObject.grid.x + wRegrid.x + U.x;
     tRegrid.y = gridObject.grid.y + wRegrid.y + U.y;
     tK{i} = performLinearInterpolation(Template,tRegrid, gridObject);
+%     for k = 1 : length(U.x)
+%         for l = 1 : length(U.y)
+%             tK{i}.x(x(k), y(l)) = tK{i}.x(x(k), y(l)) + U.x(k,l);
+%             tK{i}.y(x(k), y(l)) = tK{i}.y(x(k), y(l)) + U.y(k,l);
+% 
+%         end
+%     end
 
 %     if(i > 1)
 %        if max(max((Source - tK{i-1}.x) - (Source - tK{i}.y))) <=  max(max((Source - tK{i}.x).*tolerance.distanceTolerance)) | ...
@@ -157,8 +167,8 @@ while 1;
     % Minimization is performed in the forcefield function
     force = forceField(tK{i}, Source, U, gridObject, "none");
     
-    drawnow
-    % visualize the force field on the image
+%     drawnow
+%     % visualize the force field on the image
     visualize(force.x, force.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
     disp("Displaying force fields");
     pause(2);
@@ -179,7 +189,7 @@ while 1;
     V.x = (Dx) .* force.x;
     V.y = (Dy) .* force.y;
     
-    % visualize the velocity field on the image
+%     % visualize the velocity field on the image
     visualize(V.x, V.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
     disp("Displaying Velocity Vector fields");
     pause(2);
@@ -187,7 +197,7 @@ while 1;
    [pertubation, delta] = computePertubationAndUpdateDisplacement(gridObject, U, V, tolerance, regridCounter, wK, yQ, tK, i);
    
    % terminating condition
-   if i > maxIter
+    if i > maxIter %| ((priorDelta - delta)/priorDelta) < tolerance.delta 
        return
    end
    
@@ -223,12 +233,28 @@ while 1;
 %     [gx, gy] = gradient(double(diffImage));
 %     [gxx, gxy] = gradient(gx);
 %     [gxy, gyy] = gradient(gy);
+    
+    pause(2);
     priorDelta = delta;
     i = i +1;
+    max(max(U.x))
+    max(max(U.y))
 end
 %%
-U.x =  (wK{i}.x + real(ceil(U.x)));
-U.y =  (wK{i}.y + real(ceil(U.y)));
+TemplateOut = 0;
+% U.x = U.x ./ tolerance.distanceTolerance;
+% U.y = U.y ./ tolerance.distanceTolerance;
+
+for d = 1: length(U.x)
+    for j = 1: length(U.y)
+        TemplateOut(ceil(abs(x(d) + U.x(d, j))), ceil(abs(y(j) + U.y(d, j)))) = Template(x(d),y(j)); 
+    end
+end
+
+figure; imagesc(TemplateOut);
+%%
+U.x =  (wK{i}.x + real((U.x)));
+U.y =  (wK{i}.y + real((U.y)));
 
 field(:,:,1) = ceil(X - U.x);
 field(:,:,2) = ceil(Y - U.y);
