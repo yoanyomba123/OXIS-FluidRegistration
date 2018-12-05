@@ -8,7 +8,7 @@ function force = forceField(Template, Source, displacement, gridObject, method);
 % Computes Force Field
 SSD = 0.0;
 alpha = 0.5;
-
+maxTol = length(Template.x);
 x = gridObject.x;
 y = gridObject.y;
 Ux = displacement.x;
@@ -43,36 +43,21 @@ for i=2:xLen;
         xPos = [x(i), y(j)]; % obtain position
         xComp = xPos(1);
         yComp = xPos(2);
-        TemplateXComp = ceil(real(ceil(xComp - Ux(xComp))));
-        TemplateYComp = ceil(real(ceil(yComp - Uy(yComp))));
-        
-        % compute the partial of T with respect to x and Y by Forward Difference
-        % Scheme
-        dTdx = (double(Template.x(TemplateXComp+1,TemplateYComp)) - double(Template.x(TemplateXComp-1,TemplateYComp))) / dx; % Partial of T with respect to x 
-        dTdy = (double(Template.y(TemplateXComp,TemplateYComp+1)) - double(Template.y(TemplateXComp,TemplateYComp-1))) / dy; % Partial of T with respect to y
-        % Compute the actual force field by taking the difference between
-        % the template image and the source multiplied by the computed
-        % gradient
-        fx(i,j) = -alpha*(double(Template.x(TemplateXComp,TemplateYComp)) - double(Source(TemplateXComp,TemplateYComp))) * dTdx;
-		fy(i,j) = -alpha*(double(Template.y(TemplateXComp,TemplateYComp)) - double(Source(TemplateXComp,TemplateYComp))) * dTdy;
-        
+        TemplateXComp = ceil(real(ceil(xComp + Ux(xComp))));
+        TemplateYComp = ceil(real(ceil(yComp + Uy(yComp))));
+        if(TemplateXComp <= maxTol & TemplateYComp <= maxTol & TemplateXComp > 0 & TemplateYComp > 0)
+            % compute the partial of T with respect to x and Y by Forward Difference
+            % Scheme
+            dTdx = (double(Template.x(TemplateXComp+1,TemplateYComp)) - double(Template.x(TemplateXComp-1,TemplateYComp))) / dx; % Partial of T with respect to x 
+            dTdy = (double(Template.y(TemplateXComp,TemplateYComp+1)) - double(Template.y(TemplateXComp,TemplateYComp-1))) / dy; % Partial of T with respect to y
+            % Compute the actual force field by taking the difference between
+            % the template image and the source multiplied by the computed
+            % gradient
+            fx(i,j) = -alpha*(double(Template.x(TemplateXComp,TemplateYComp)) - double(Source(TemplateXComp,TemplateYComp))) * dTdx;
+            fy(i,j) = -alpha*(double(Template.y(TemplateXComp,TemplateYComp)) - double(Source(TemplateXComp,TemplateYComp))) * dTdy;
+        end
         % TODO : FIX THIS LATER
         Sample = Template.x - Source;
-        
-        
-        if(method == "QN")
-           if i == j
-               Data = Sample(1:i, 1:j); 
-               centered_diff = full(gallery('tridiag', i, 1,-2,1));
-               Hessian = Data .* centered_diff .* centered_diff;
-               Gradient = gradient(Data);
-               if(det(Hessian) > 0)
-                fx(1:i, 1:j) = fx(1:i, 1:j) - (inv(Hessian) .* Gradient);
-                fy(1:i, 1:j) = fy(1:i, 1:j) - (inv(Hessian) .* Gradient);
-               end
-           end
-        end
-    
     end
 end
 

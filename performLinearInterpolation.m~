@@ -15,8 +15,8 @@ U = applyDirichletBC(U);
 
 for i = 1: uVecXLen - 1 
     for j = 1: uVecYLen - 1
-        X(i, j) = abs(gridObject.grid.x(i) + 1 + U.x(i,j));
-        Y(i, j) = abs(gridObject.grid.y(j) + 1 + U.y(i,j));
+        X(i, j) = abs(gridObject.grid.x(i) + 1 + uVecX(i,j));
+        Y(i, j) = abs(gridObject.grid.y(j) + 1 + uVecY(i,j));
     end
 end
 
