@@ -31,22 +31,21 @@ for i = 2:length(Vx)-2
         dUy_dy = (Uy(i, j+1) - Uy(i, j-1))/dy2;
         dUy_dx = (Uy(i+1, j) - Uy(i-1, j))/dx2;
 
-        perturbation.x(i, j) = Vx(i, j) - (Vx(i,j).* dUx_dx)  - (Vy(i, j) .* dUy_dx); 
-        perturbation.y(i, j) = Vy(i, j) - (Vy(i, j).* dUy_dy) - (Vx(i,j) .* dUx_dy); 
+        perturbation.x(i, j) = Vx(i, j) - (Vx(i,j).* dUx_dx)  - (Vy(i, j) .* dUy_dx); %dUy_dx
+        perturbation.y(i, j) = Vy(i, j) - (Vy(i, j).* dUy_dy) - (Vx(i,j) .* dUx_dy); %dUx_dy
         
-%         perturbL2Norm = (perturbation.x(i, j) .^2 +  perturbation.y(i, j) .^ 2);
-% 
-%         if perturbL2Norm > maxPertubation && perturbL2Norm ~= 0
-%             maxPertubation = perturbL2Norm;
-%         end
-%         
-%         if maxPertubation == 0.0
-%            maxPertubation = perturbL2Norm;
-%         end
+        perturbL2Norm = sqrt(perturbation.x(i, j) .^2 +  perturbation.y(i, j) .^ 2);
+
+        if perturbL2Norm > maxPertubation && perturbL2Norm ~= 0
+            maxPertubation = perturbL2Norm;
+        end
+        
+        if maxPertubation == 0.0
+           maxPertubation = perturbL2Norm;
+        end
     end
 end
 
-delta = tolerance.deformationTolerance / sqrt(max(max(perturbation.x)) ^ 2 +  max(max(perturbation.y)) ^ 2)
-
+delta = tolerance.deformationTolerance / maxPertubation;
 end
 

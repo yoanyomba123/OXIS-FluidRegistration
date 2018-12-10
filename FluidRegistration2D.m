@@ -5,23 +5,21 @@
 %   The purpose of this script is to implement a fluid registration model
 %   in matlab. The Registration model makes use of the Eularian reference
 %   frame and uses the sum of square difference as a cost function.
-
-% Clear Up Workspace
+%% Clear Up Workspace
 clc; clear; close all;
 
-% Add all paths to current workspace recursively
+%% Add all paths to current workspace recursively
 currentFolder = pwd;
 addpath(genpath(currentFolder));
 
-% Load In Images Into Workspace
+%% Load In Images Into Workspace
 [Template, Source] = loadImages("Data");
 
 Template =  Template;
 Source =  Source;
 
-Template = imrotate(Template,-15,'bilinear','crop');
-% Template  =  imrotate(Template,-10,'bilinear','crop');
-% templateSourceDiff = Template - Source;
+
+Template = imrotate(Template,-5,'bilinear','crop'); % rotate the template image
 
 % display and visualize both images
 figure; imagesc([Template, Source]);
@@ -33,7 +31,7 @@ maxdiff = max(max(Template - Source))
 
 % params
 params = struct();
-params.mu = 500;
+params.mu = 1;
 params.lambda = 1;
 
 % define stencils
@@ -49,18 +47,19 @@ stencil.S21 = stencil.S12';
 
 % tolerance definition
 tolerance = struct();
-tolerance.deformationTolerance = 10;
-tolerance.jacobianTolerance = 0.025;
-tolerance.distanceTolerance = 10e-5;
-tolerance.delta = 0.00005;
+tolerance.deformationTolerance = 300;
+tolerance.jacobianTolerance = 0.35;
+tolerance.distanceTolerance = 1e-7;
+tolerance.mse = 1e-10;
 
-maxIter = 300;
+% max iteration terminating condition
+maxIter = 100;
 
 % grid definition
 [rows, cols] = size(Template);
 gridObject = struct();
-gridObject.numXPoints = 100;
-gridObject.numYPoints = 100;
+gridObject.numXPoints = 50;
+gridObject.numYPoints = 50;
 gridObject.grid = struct();
 
 % generate points that are not on the boundary of the image
@@ -73,6 +72,7 @@ gridObject.x = x;
 gridObject.y = y;
 gridObject.grid.x = X;
 gridObject.grid.y = Y;
+gridObject.width = 1;
 gridObject.dx = 1*ceil(gridObject.rows/gridObject.numXPoints);
 gridObject.dy = 1*ceil(gridObject.cols/gridObject.numYPoints);
 
@@ -112,22 +112,12 @@ A = struct();
 V = struct();
 Jacobian = struct();
 deltalU = struct();
-% Obtain True Template
-for i = 2:length(x)
-    for j = 2:length(y)
-        sampleTemplate(i,j) = Template(x(i), y(j));
-        sampleSource(i,j) = Source(x(i), y(j));
-    end
-end
-gridObject.sampleTemplate = sampleTemplate;
-gridObject.sampleSource = sampleSource;
-figure; imagesc([Template, Source]);
-title("Template (Rotated) | Source")
-% figure; imagesc([sampleSource]);
-% title("Source Image");
-% figure; imagesc([sampleTemplate]);
-% title("Template Image");
-% Algorithm
+
+% Obtain Template and Source Based On Grid Point Definitions 
+gridObject.sampleTemplate = generateTrueGridImage(gridObject.x, gridObject.y, Template);
+gridObject.sampleSource = generateTrueGridImage(gridObject.x, gridObject.y, Source);
+
+
 wk = struct();
 displacementVector = cell(1, maxIter);
 x = x + 1;
@@ -137,37 +127,29 @@ TemplateSet = cell(1, maxIter);
 figure;
 priorDelta = 0;
 i = 1;
+initialMSE = 1;
 while 1;
     % store prior tolerance value for optimization
     deformationDistTolprevious = tolerance.deformationTolerance;
     
     % perform 2D interpolation
     % turn this into a function
-    wRegrid.x = interp2(yQ{regridCounter}.x,gridObject.grid.x + U.x,'linear');
-    wRegrid.y =  interp2(yQ{regridCounter}.y,gridObject.grid.y + U.y,'linear');
+    wRegrid.x = interpn(yQ{regridCounter}.x,gridObject.grid.x - U.x,'linear');
+    wRegrid.y =  interpn(yQ{regridCounter}.y,gridObject.grid.y - U.y,'linear');
     wK{i} = wRegrid;
     
-    tRegrid.x = gridObject.grid.x + wRegrid.x + U.x;
-    tRegrid.y = gridObject.grid.y + wRegrid.y + U.y;
+    tRegrid.x = X - wRegrid.x - U.x;
+    tRegrid.y = Y - wRegrid.y - U.y;
     [tK{i}, U] = performLinearInterpolation(Template,tRegrid,U,gridObject);
-%     for k = 1 : length(U.x)
-%         for l = 1 : length(U.y)
-%             tK{i}.x(x(k), y(l)) = tK{i}.x(x(k), y(l)) + U.x(k,l);
-%             tK{i}.y(x(k), y(l)) = tK{i}.y(x(k), y(l)) + U.y(k,l);
-% 
-%         end
-%     end
 
-   
-    
     % Minimization is performed in the forcefield function
     force = forceField(tK{i}, Source, U, gridObject, "none");
     
-%     drawnow
-%     % visualize the force field on the image
-    visualize(force.x, force.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
-    disp("Displaying force fields");
-    pause(2);
+    drawnow
+    % visualize the force field on the image
+    %visualize(force.x, force.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
+    %disp("Displaying force fields");
+    %pause(2);
     
     % obtain V
     % Turn this into a function
@@ -185,23 +167,18 @@ while 1;
     V.x = (Dx) .* force.x;
     V.y = (Dy) .* force.y;
     V = applyBC(V);
-%     % visualize the velocity field on the image
-    visualize(V.x, V.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
-    disp("Displaying Velocity Vector fields");
-    pause(2);
+
+    % visualize the velocity field on the image
+    %visualize(V.x, V.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
+    %disp("Displaying Velocity Vector fields");
+    %pause(2);
  
    [pertubation, delta] = computePertubationAndUpdateDisplacement(gridObject, U, V, tolerance, regridCounter, wK, yQ, tK, i);
    
-   % terminating condition
-    if i > maxIter %| ((priorDelta - delta)/priorDelta) < tolerance.delta 
-       return
-   end
-   
    regridBool = computeJacobian(gridObject, U, delta, pertubation, tolerance);
    if regridBool == "false"
-        U.x = U.x + pertubation.x .* delta;
-        U.y = U.y + pertubation.y .* delta;
-        U = applyBC(U);
+        U.x = U.x + (pertubation.x .* delta);
+        U.y = U.y + (pertubation.y .* delta);
    else
         singularityCount = 0;
         while regridBool == "True"
@@ -214,59 +191,54 @@ while 1;
                break;
            end
         end
-   end
+    end
   
-    visualize(U.x, U.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
-    disp("Displaying Displacement Vector fields");
-    pause(2);
-
+    %visualize(U.x, U.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
+    %disp("Displaying Displacement Vector fields");
+    %pause(2);
     
-    % apply the deformation to template
-    %[movingRegistered]= imwarp(Template,diss);
-    % obtain maximal difference 
-    %diffImage = (movingRegistered - gridObject.sampleSource);
-    % need to fix this ( find the derivative of the difference with respect
-    % to the tolerance
-%     [gx, gy] = gradient(double(diffImage));
-%     [gxx, gxy] = gradient(gx);
-%     [gxy, gyy] = gradient(gy);
-    field(:,:,1) = gridObject.x - U.x;
-    field(:,:,2) = gridObject.y - U.y;
-    TemplateSet{i} = imwarp(Template,field);
-    
-     if(i > 1)
-       if (gridObject.sampleSource - TemplateSet{i-1}) - (gridObject.sampleSource  - TemplateSet{i}) <=  (gridObject.sampleSource  - TemplateSet{i}) .* tolerance.distanceTolerance
+    currentMSE = immse(tK{i}, Source);
+    if(i > 1)
+       if norm((Source - tK{i-1}) - (Source  - tK{i}),2) <=  norm((Source  - tK{i}) .* tolerance.distanceTolerance,2)
             return;
        end
     end
     
-    priorDelta = delta;
-    i = i +1;
+     % terminating condition (Max iteration reached or mse tolerance 
+    mseRateOfChange = abs((currentMSE - initialMSE)/(initialMSE))
+    if i > maxIter | mseRateOfChange <= tolerance.mse
+       return
+    end
     
+    initialMSE = currentMSE;
+    i = i +1;
 end
 %%
 TemplateOut = 0;
+SourceOut = Source;
 % U.x = U.x ./ tolerance.distanceTolerance;
 % U.y = U.y ./ tolerance.distanceTolerance;
 
 c = 0;
 for d = 1: length(U.x)
     for j = 1: length(U.y)
-        if(x(d) + U.x(d, j)) <= length(Template) & (y(j) + U.y(d, j)) <= length(Template) & (x(d) + U.x(d, j)) > 0 & (y(j) + U.y(d, j)) > 0
-            TemplateOut(ceil(abs(x(d) +  U.x(d, j))), ceil(abs(y(j) +   U.y(d, j)))) = Template(x(d),y(j)); 
+        if(x(d) - U.x(d, j)) <= length(Template) & (y(j) - U.y(d, j)) <= length(Template) & (x(d) - U.x(d, j)) > 0 & (y(j) - U.y(d, j)) > 0
+            TemplateOut(ceil(abs(x(d) -  U.x(d, j))), ceil(abs(y(j) -   U.y(d, j)))) = Template(x(d),y(j)); 
+            SourceOut(x(d), y(j)) = Source(x(d), y(j));
             c= c + 1;
         end
     end
 end
 
-figure; imagesc(TemplateOut);
+figure; imagesc([TemplateOut]); colormap gray;
 title("Deformed Template (Iteration: 85)");
 
-figure; imshowpair(TemplateOut, Source);
-title("Deformed Template Vs Source (Iteration: 85)");
 
-figure; imshowpair(TemplateOut, Template);
-title("Deformed Template vs Original Template (Iteration: 85)")
+% figure; imshowpair(TemplateOut, Source);
+% title("Deformed Template Vs Source (Iteration: 85)");
+% 
+figure; imagesc([TemplateOut Template]);
+% title("Deformed Template vs Original Template (Iteration: 85)")
 %%
 U.x =  (wK{i}.x + real((U.x)));
 U.y =  (wK{i}.y + real((U.y)));
@@ -284,7 +256,6 @@ for i = 1: length(U.x)
     for j = 1: length(U.y)
         TemplateT(ceil(abs(x(i) + U.x(i, j))), ceil(abs(y(j) + U.y(i, j)))) = Template(x(i),y(j)); 
         TemplateInit(x(i),y(j)) = Template(x(i),y(j));
-        SourceGrid(x(i),y(j)) = Source(x(i),y(j));
     end
 end
 tout = imwarp(Template, field);

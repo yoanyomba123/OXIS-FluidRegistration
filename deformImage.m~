@@ -1,0 +1,14 @@
+function deformedImage = deformImage(Template, DisplacementField, X, Y)
+[rows, cols] = size(X);
+
+deformedImage = Template;
+for i = 1: cols
+        newX = (X(i)-DisplacementField.x(i));
+        newY = (Y(i)-DisplacementField.y(i));
+        if newX > 0 & newY > 0 & newX <= rows & newY <= cols
+            deformedImage(newX,newY) = deformedImage(X(i), Y(i));
+        end
+end
+
+end
+
