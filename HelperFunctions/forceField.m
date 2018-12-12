@@ -43,8 +43,8 @@ for i=2:xLen;
         xPos = [x(i), y(j)]; % obtain position
         xComp = xPos(1);
         yComp = xPos(2);
-        TemplateXComp = ceil(real(ceil(xComp + Ux(xComp))));
-        TemplateYComp = ceil(real(ceil(yComp + Uy(yComp))));
+        TemplateXComp = ceil(real(ceil(xComp - Ux(xComp))));
+        TemplateYComp = ceil(real(ceil(yComp - Uy(yComp))));
         if(TemplateXComp < maxTol & TemplateYComp < maxTol & TemplateXComp > 0 & TemplateYComp > 0)
             % compute the partial of T with respect to x and Y by Central Difference
             % Scheme

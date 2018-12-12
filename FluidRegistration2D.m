@@ -19,7 +19,7 @@ Template =  Template;
 Source =  Source;
 
 
-Template = imrotate(Template,-5,'bilinear','crop'); % rotate the template image
+Template = imrotate(Template,-15,'bilinear','crop'); % rotate the template image
 
 % display and visualize both images
 figure; imagesc([Template, Source]);
@@ -47,19 +47,19 @@ stencil.S21 = stencil.S12';
 
 % tolerance definition
 tolerance = struct();
-tolerance.deformationTolerance = 300;
+tolerance.deformationTolerance = 50;
 tolerance.jacobianTolerance = 0.35;
 tolerance.distanceTolerance = 1e-7;
-tolerance.mse = 1e-10;
+tolerance.mse = 1e-13;
 
 % max iteration terminating condition
-maxIter = 100;
+maxIter = 500;
 
 % grid definition
 [rows, cols] = size(Template);
 gridObject = struct();
-gridObject.numXPoints = 50;
-gridObject.numYPoints = 50;
+gridObject.numXPoints = 100;
+gridObject.numYPoints = 100;
 gridObject.grid = struct();
 
 % generate points that are not on the boundary of the image
@@ -219,102 +219,120 @@ SourceOut = Source;
 % U.x = U.x ./ tolerance.distanceTolerance;
 % U.y = U.y ./ tolerance.distanceTolerance;
 
-c = 0;
+%c = 0;
 for d = 1: length(U.x)
     for j = 1: length(U.y)
-        if(x(d) - U.x(d, j)) <= length(Template) & (y(j) - U.y(d, j)) <= length(Template) & (x(d) - U.x(d, j)) > 0 & (y(j) - U.y(d, j)) > 0
-            TemplateOut(ceil(abs(x(d) -  U.x(d, j))), ceil(abs(y(j) -   U.y(d, j)))) = Template(x(d),y(j)); 
-            SourceOut(x(d), y(j)) = Source(x(d), y(j));
-            c= c + 1;
+        if(x(d) - U.x(d, j)) <= length(Template) & (y(j) - U.y(d, j)) <= length(Template) & (x(d) -  U.x(d, j)) > 0 & (y(j) - U.y(d, j)) > 0
+            TemplateOut(x(d),y(j)) = Source(ceil(abs(x(d) -  U.x(d, j))),ceil(abs(y(j) -  U.y(d, j)))); 
+            %SourceOut(x(d), y(j)) = Source(x(d), y(j));
+            %c = c + 1;
         end
     end
 end
-
+%%
+outut = 0;
+for i = 1: length(Template)
+    for j = 1: length(Template)
+        if ismember(i, x) & ismember(j,y)
+           index_x = find(x==i);
+           index_y = find(y==j);
+           if(x(index_x) - U.x(index_x, index_y)) <= length(Template) & (y(index_y) - U.y(index_x, index_y)) <= length(Template) & (x(index_x) -  U.x(index_x, index_y)) > 0 & (y(index_y) - U.y(index_x, index_y)) > 0
+               outut(x(index_x),y(index_y)) = Source(ceil(abs(x(index_x) -  U.x(index_x, index_y))),ceil(abs(y(index_y) -  U.y(index_x, index_y)))); 
+           end
+        else
+            outut(i,j) = Source(i, j);
+        end
+    end
+end
+%%
+Tout = interp2(TemplateOut); figure; imagesc(Tout);
 figure; imagesc([TemplateOut]); colormap gray;
-title("Deformed Template (Iteration: 85)");
+title("Deformed Template (Iteration: " + num2str(i-1) + ")");
 
 
-% figure; imshowpair(TemplateOut, Source);
+%% figure; imshowpair(TemplateOut, Source);
 % title("Deformed Template Vs Source (Iteration: 85)");
 % 
-figure; imagesc([TemplateOut Template]);
+figure; imshowpair(TemplateOut, Source,"diff");
+
+%% Clean This Up
 % title("Deformed Template vs Original Template (Iteration: 85)")
-%%
-U.x =  (wK{i}.x + real((U.x)));
-U.y =  (wK{i}.y + real((U.y)));
-
-field(:,:,1) = ceil(X - U.x);
-field(:,:,2) = ceil(Y - U.y);
-
-%Tout = imwarp(Template, field);
-x = x+1;
-y = y+1;
-templateT = 0;
-templateInit = 0;
-SourceGrid = 0;
-for i = 1: length(U.x)
-    for j = 1: length(U.y)
-        TemplateT(ceil(abs(x(i) + U.x(i, j))), ceil(abs(y(j) + U.y(i, j)))) = Template(x(i),y(j)); 
-        TemplateInit(x(i),y(j)) = Template(x(i),y(j));
-    end
-end
-tout = imwarp(Template, field);
-
-
-figure; imshowpair(TemplateInit, SourceGrid,'ColorChannels', 'green-magenta');
-figure; imshowpair(TemplateT, SourceGrid, 'ColorChannels', 'red-cyan');
-
-%%
-displacementfield(:,:,1) = ceil(X + U.x);
-displacementfield(:,:,2) = ceil(Y + U.y);
-
-figure;plot(displacementfield(:,:,1),displacementfield(:,:,2)); hold on;
-
-visualize(U.x, U.y, displacementfield(:,:,1), displacementfield(:,:,2), gridObject.sampleTemplate);
-disp("Displaying Displacement Vector fields");
-pause(1);
-
-%%
-output = imwarp(sampleTemplate, displacementfield);
-figure; imshowpair(output,sampleTemplate);
-title("Registered Image vs Template");
-
-figure; imshowpair(output, sampleSource,"ColorChannels", 'red-cyan');
-title("difference between the Registered Image amd Source");
-
-figure; imshowpair(output, sampleTemplate,"ColorChannels", 'red-cyan');
-title("difference between the Output Image amd Template");
-
-
-RegisteredImage = zeros(length(U.x), length(U.y));
-
-for i = 1: length(U.x)
-    for j =1: length(U.y)     
-        x_hat = U.x(i,j);
-        y_hat = U.y(i,j);
-        x_def = ceil(i + x_hat);
-        y_def = ceil(j + y_hat);
-        if(x_def > 0 && y_def > 0)
-           RegisteredImage(x_def, y_def) = sampleTemplate(i,j);
-        end
-    end
-end
-
-RegisteredImage = RegisteredImage(1:end-1,1:end-1);
-figure; imagesc(RegisteredImage);
-figure; imagesc(sampleTemplate);
-
-
-
-% figure; imagesc([RegisteredImage sampleTemplate]);
-% figure; imshowpair(RegisteredImage, sampleSource,'ColorChannels','red-cyan');
-figure; imshowpair(RegisteredImage, sampleTemplate,'ColorChannels','red-cyan');
-
-% tOut(:,:,1) = interp2(Template,  gridObject.grid.x - U.x);
-% tOut(:,:,2) = interp2(Template, gridObject.grid.y - U.y);
+% %%
+% U.x =  (wK{i}.x + real((U.x)));
+% U.y =  (wK{i}.y + real((U.y)));
 % 
-% for i = 2: length(U.x)
-%     for j = 2: length(U.y);
-%         output(i, j) = Template(x(i), y(j)) + U.x(i, j)+ U.y(i, j) ;
+% field(:,:,1) = ceil(X - U.x);
+% field(:,:,2) = ceil(Y - U.y);
+% 
+% %Tout = imwarp(Template, field);
+% x = x+1;
+% y = y+1;
+% templateT = 0;
+% templateInit = 0;
+% SourceGrid = 0;
+% for i = 1: length(U.x)
+%     for j = 1: length(U.y)
+%         TemplateT(ceil(abs(x(i) + U.x(i, j))), ceil(abs(y(j) + U.y(i, j)))) = Template(x(i),y(j)); 
+%         TemplateInit(x(i),y(j)) = Template(x(i),y(j));
 %     end
 % end
+% tout = imwarp(Template, field);
+% 
+% 
+% figure; imshowpair(TemplateInit, SourceGrid,'ColorChannels', 'green-magenta');
+% figure; imshowpair(TemplateT, SourceGrid, 'ColorChannels', 'red-cyan');
+% 
+% %%
+% displacementfield(:,:,1) = ceil(X + U.x);
+% displacementfield(:,:,2) = ceil(Y + U.y);
+% 
+% figure;plot(displacementfield(:,:,1),displacementfield(:,:,2)); hold on;
+% 
+% visualize(U.x, U.y, displacementfield(:,:,1), displacementfield(:,:,2), gridObject.sampleTemplate);
+% disp("Displaying Displacement Vector fields");
+% pause(1);
+% 
+% %%
+% output = imwarp(sampleTemplate, displacementfield);
+% figure; imshowpair(output,sampleTemplate);
+% title("Registered Image vs Template");
+% 
+% figure; imshowpair(output, sampleSource,"ColorChannels", 'red-cyan');
+% title("difference between the Registered Image amd Source");
+% 
+% figure; imshowpair(output, sampleTemplate,"ColorChannels", 'red-cyan');
+% title("difference between the Output Image amd Template");
+% 
+% 
+% RegisteredImage = zeros(length(U.x), length(U.y));
+% 
+% for i = 1: length(U.x)
+%     for j =1: length(U.y)     
+%         x_hat = U.x(i,j);
+%         y_hat = U.y(i,j);
+%         x_def = ceil(i + x_hat);
+%         y_def = ceil(j + y_hat);
+%         if(x_def > 0 && y_def > 0)
+%            RegisteredImage(x_def, y_def) = sampleTemplate(i,j);
+%         end
+%     end
+% end
+% 
+% RegisteredImage = RegisteredImage(1:end-1,1:end-1);
+% figure; imagesc(RegisteredImage);
+% figure; imagesc(sampleTemplate);
+% 
+% 
+% 
+% % figure; imagesc([RegisteredImage sampleTemplate]);
+% % figure; imshowpair(RegisteredImage, sampleSource,'ColorChannels','red-cyan');
+% figure; imshowpair(RegisteredImage, sampleTemplate,'ColorChannels','red-cyan');
+% 
+% % tOut(:,:,1) = interp2(Template,  gridObject.grid.x - U.x);
+% % tOut(:,:,2) = interp2(Template, gridObject.grid.y - U.y);
+% % 
+% % for i = 2: length(U.x)
+% %     for j = 2: length(U.y);
+% %         output(i, j) = Template(x(i), y(j)) + U.x(i, j)+ U.y(i, j) ;
+% %     end
+% % end
