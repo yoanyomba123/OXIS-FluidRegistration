@@ -1,0 +1,22 @@
+Gert Wollny <gw.fossdev@gmail.com>
+
+Additional contributions: 
+
+  David Pastor 
+  Marc Tittgemeyer
+  Heike Jänicke
+  Stefan Burckhardt 
+  Carsten Wolters
+
+The filter routines for splines and omoms is based on code by
+  Philippe Thevenaz http://bigwww.epfl.ch/thevenaz/interpolation/
+ 
+The CGaussNoiseGenerator::box_muller in 
+  mia/core/noisegen/gauss.cc 
+implements the Polar form of the Box-Muller Transformation 
+
+ (c) Copyright 1994, Everett F. Carter Jr.
+ Permission is granted by the author to use
+ this software for any application provided this
+ copyright notice is preserved.
+

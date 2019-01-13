@@ -1,0 +1,79 @@
+/** \mainpage MIA - plug-in based framework for gray-scale and medical image processing 
+ 
+  \section intro_sec Introduction
+  
+  The MIA provides a framwork for common tasks in gray scale images processing 
+  including image filtering and image registration for 2D and 3D images. 
+  This is the documentation of the public interface of the according libraries.
+
+  In addition to this library interface there exist a number of plug-ins and 
+  programs make use if the interface and can be run to execute certain 
+  image processing tasks.
+  For information about these programs and plug-ins please see the user guide 
+  at https://sourceforge.net/apps/mediawiki/mia/index.php?title=Mia_-_A_tool_chain_for_Medical_Image_Analysis
+
+  \author Gert Wollny gw.fossdev@gmail.com 
+
+  If you use this software to prepare a scientific publication, please reference it as 
+  
+  Gert Wollny, "MIA - A plugin-based Framework for Medical Image Processing", http://mia.sf.net 
+
+  \section naming_sec About naming schemes
+
+  The following naming scheme is employed for most of the classes and data structurs: 
+  
+  Names for template classes that provide interfaces start with a capital "T" e.g. TShape, or TFactory.
+  Names of classes start with a capital "C" like CSegSet, or CSplineKernel. 
+  Classes and structures that work as functors are named starting with a capital "F", e.g. FMeanValue. 
+  Names of PODs (plain old data structures) begin with a "S".
+  Exceptions to this rule will be renamed in time. 
+
+  Classes and structures that start with two underscores, like __type_descr are traits, or other classes that are used 
+  for template meta programming, i.e. the type based dispaching of function class.
+
+  \section naming_sec_files File names
+  
+  C++ Header files use the suffix ".hh",  C++ implementation files use ".cc". 
+  For specific template implementations are only included for explicit template instanciations, the 
+  files use the suffic ".cxx". 
+  
+  File names do not necessarily correspond directly to classes defined and implemented in these files,
+  but usually hint at the funcionallity provided. 
+   
+  A file may contain more then one class and additional functions that are closely linked.
+    
+    
+    \defgroup basic Basic data strctures and functions 
+    \brief Basic data structures for data and meta-data handling 
+
+    \defgroup cmdline Command line and parameter parsing 
+    \brief These classes and functions relate to the parsing of the command line and the parameter parsing for plug-ins 
+    
+    \defgroup filtering Filtering and combining 
+    \brief These classes and functions are related to  filtering and combining of 2D and 3D images. 
+
+    \defgroup io Input/output of files 
+    \brief Input and output of images 
+
+    \defgroup registration Image Registration and Transformation 
+    \brief Comparison, registration, and transformation of images 
+
+    \defgroup interpol Interpolation 
+    \brief These classes deal with the tasks related to interpolation
+
+    \defgroup logging Logging and debugguing 
+    \brief Classes and functions that are used for textual output 
+	      
+    \defgroup perf Perfusion Analysis 
+    \brief Classes and functions related to the analyis of perfusion data 
+
+    \defgroup plugin Plug-in handling 
+    \brief Classes and functions that implement the plug-in infrastructure
+
+    \defgroup traits Template metaprogramming classes
+    
+    \defgroup tests Test classes and functions
+	    	      
+    \defgroup misc Uncategorized 
+    
+*/
