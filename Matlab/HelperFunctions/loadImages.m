@@ -3,8 +3,8 @@ function [Template,Source] = loadImages(path)
 % important to note that the provided file path must contain two files
 % named Template.dcm and source.dcm
 % Read In Images
-templatePath = path + "/Knee1/image-000002.dcm";
-sourcePath = path + "/knee1/image-000006.dcm";
+templatePath = path + "/Template.dcm";
+sourcePath = path + "/Source.dcm";
 
 Template = im2double(dicomread(templatePath));
 Source = im2double(dicomread(sourcePath));

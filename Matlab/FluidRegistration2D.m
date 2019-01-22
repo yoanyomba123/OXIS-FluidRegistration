@@ -19,7 +19,7 @@ Template =  Template;
 Source =  Source;
 
 
-Template = imrotate(Template,1,'bilinear','crop'); % rotate the template image
+Template = imrotate(Template,-30,'bilinear','crop'); % rotate the template image
 
 % display and visualize both images
 figure; imagesc([Template, Source]); colormap gray;
@@ -58,8 +58,8 @@ maxIter = 500;
 % grid definition
 [rows, cols] = size(Template);
 gridObject = struct();
-gridObject.numXPoints = 200;
-gridObject.numYPoints = 200;
+gridObject.numXPoints = 300;
+gridObject.numYPoints = 300;
 gridObject.grid = struct();
 
 % generate points that are not on the boundary of the image
