@@ -19,20 +19,20 @@ Template =  Template;
 Source =  Source;
 
 
-Template = imrotate(Template,-15,'bilinear','crop'); % rotate the template image
+Template = imrotate(Template,1,'bilinear','crop'); % rotate the template image
 
 % display and visualize both images
-figure; imagesc([Template, Source]);
+figure; imagesc([Template, Source]); colormap gray;
 
 % display and visualize difference between both images
  figure; imshowpair(Template, Source);
-maxdiff = max(max(Template - Source))
+maxdiff = max(max(Template - Source));
 %% Define Initial Conditions 
 
 % params
 params = struct();
-params.mu = 1;
-params.lambda = 1;
+params.mu = 10;
+params.lambda = 15;
 
 % define stencils
 stencil = struct();
@@ -49,7 +49,7 @@ stencil.S21 = stencil.S12';
 tolerance = struct();
 tolerance.deformationTolerance = 50;
 tolerance.jacobianTolerance = 0.35;
-tolerance.distanceTolerance = 1e-7;
+tolerance.distanceTolerance = 1e-5;
 tolerance.mse = 1e-13;
 
 % max iteration terminating condition
@@ -58,8 +58,8 @@ maxIter = 500;
 % grid definition
 [rows, cols] = size(Template);
 gridObject = struct();
-gridObject.numXPoints = 100;
-gridObject.numYPoints = 100;
+gridObject.numXPoints = 200;
+gridObject.numYPoints = 200;
 gridObject.grid = struct();
 
 % generate points that are not on the boundary of the image
@@ -224,6 +224,9 @@ for d = 1: length(U.x)
 end
 
 % plot the outputed image
+TemplateOut(:, 512) = 0;
+TemplateOut(512,:) = 0;
+figure; imagesc([Template, Source]); title("Template vs Source"); colormap gray
 figure; imagesc(TemplateOut); colormap gray; title("Transformed Image");
 figure; imshowpair(TemplateOut, Source); colormap gray; title("Transformed Image vs Source");
 figure; imshowpair(TemplateOut, Template); colormap gray; title("Transformed Template vs Template")

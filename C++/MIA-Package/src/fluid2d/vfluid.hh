@@ -27,9 +27,9 @@
 
 #include <memory>
 
-#include <mia/2d/image.hh>
-#include <mia/2d/vectorfield.hh>
-#include <mia/2d/interpolator.hh>
+#include <../../mia/2d/image.hh>
+#include <../../mia/2d/vectorfield.hh>
+#include <../../mia/2d/interpolator.hh>
 
 #include "Pixel.hh"
 
