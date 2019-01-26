@@ -9,6 +9,7 @@
 clc; clear; close all;
 
 %% Add all paths to current workspace recursively
+
 currentFolder = pwd;
 addpath(genpath(currentFolder));
 
@@ -18,8 +19,11 @@ addpath(genpath(currentFolder));
 Template =  Template;
 Source =  Source;
 
+% Source = addLandmark(Source, 1);
+Source(180:200, 280:300) = 0;
+Source = Source(:,:,1);
 
-Template = imrotate(Template,-60,'bilinear','crop'); % rotate the template image
+Template = imrotate(Source,-60,'bilinear','crop'); % rotate the template image
 
 % display and visualize both images
 figure; imagesc([Template, Source]); colormap gray;
@@ -27,12 +31,56 @@ figure; imagesc([Template, Source]); colormap gray;
 % display and visualize difference between both images
  figure; imshowpair(Template, Source);
 maxdiff = max(max(Template - Source));
+
+%% Workspace Setup
+numpoints = 200;
+iter = 200;
+mu = 400; lambda = 400;
+
+% tolerance definition
+tolerance = struct();
+tolerance.deformationTolerance = 50;
+tolerance.jacobianTolerance = 0.05;
+tolerance.distanceTolerance = 0.01;
+
+% setup workspace environment
+setupWorkSpace(Template, Source, numpoints, iter, mu, lambda, tolerance.deformationTolerance, tolerance.jacobianTolerance, tolerance.distanceTolerance);
+
+% load workspace variables
+load("variables.mat");
+
+%% Start Implementation
+while 1
+    % store prior tolerance value for optimization
+    deformationDistTolprevious = tolerance.deformationTolerance;
+    
+    % perform 2D interpolation
+    % turn this into a function
+    wRegrid.x = interpn(yQ{regridCounter}.x,gridObject.grid.x - U.x,'linear');
+    wRegrid.y =  interpn(yQ{regridCounter}.y,gridObject.grid.y - U.y,'linear');
+    wK{i} = wRegrid;
+    
+    tRegrid.x = X - wRegrid.x - U.x;
+    tRegrid.y = Y - wRegrid.y - U.y;
+    [tK{i}, U] = performLinearInterpolation(Template,tRegrid,U,gridObject);
+
+    % Minimization is performed in the forcefield function
+end
+%% TODO
+% TODO
+% ---------------------------------------------
+% TIPS - After Each Function Created, Make Sure To Test For EFFICACY
+
+% enter into while loop to perform registration
+%   - write another force field computation function using Jacobian Maps
+
+
 %% Define Initial Conditions 
 
 % params
 params = struct();
-params.mu = 10;
-params.lambda = 15;
+params.mu = 200;
+params.lambda = 400;
 
 % define stencils
 stencil = struct();
@@ -48,18 +96,18 @@ stencil.S21 = stencil.S12';
 % tolerance definition
 tolerance = struct();
 tolerance.deformationTolerance = 50;
-tolerance.jacobianTolerance = 0.35;
-tolerance.distanceTolerance = 1e-5;
+tolerance.jacobianTolerance = 0.05;
+tolerance.distanceTolerance = 0.01;
 tolerance.mse = 1e-13;
 
 % max iteration terminating condition
-maxIter = 1500;
+maxIter = 210;
 
 % grid definition
 [rows, cols] = size(Template);
 gridObject = struct();
-gridObject.numXPoints = 150;
-gridObject.numYPoints = 150;
+gridObject.numXPoints = 200;
+gridObject.numYPoints = 200;
 gridObject.grid = struct();
 
 % generate points that are not on the boundary of the image
@@ -98,7 +146,7 @@ tRegrid.y = zeros(gridObject.numXPoints, gridObject.numYPoints);
 
 wK = cell(1, maxIter);
 wRegrid = struct();
-wRegrid.x = zeros(gridObject.numXPoints, gridObject.numYPoints);
+wRegrid.x = zeros(grifdObject.numXPoints, gridObject.numYPoints);
 wRegrid.y = zeros(gridObject.numXPoints, gridObject.numYPoints);
 
 % central Diffence Matrix Operator
@@ -147,10 +195,10 @@ while 1;
     
     drawnow
     % visualize the force field on the image
-    %visualize(force.x, force.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
-    %disp("Displaying force fields");
-    %pause(2);
-    
+    visualize(force.x, force.y, gridObject.grid.x, gridObject.grid.y, gridObject.sampleTemplate);
+    disp("Displaying force fields");
+    pause(2);
+   
     % obtain V
     % Turn this into a function
     Sx = stencil.S11 + stencil.S12;
@@ -173,10 +221,10 @@ while 1;
     %disp("Displaying Velocity Vector fields");
     %pause(2);
  
-   [pertubation, delta] = computePertubationAndUpdateDisplacement(gridObject, U, V, tolerance, regridCounter, wK, yQ, tK, i);
+   [perturbation, delta] = computePertubation(gridObject, U, V, tolerance);
    
    regridBool = computeJacobian(gridObject, U, delta, pertubation, tolerance);
-   if regridBool == "false"
+   if regridBool == "false" || i == 1
         U.x = U.x + (pertubation.x .* delta);
         U.y = U.y + (pertubation.y .* delta);
    else
@@ -219,13 +267,13 @@ for d = 1: length(U.x)
     for j = 1: length(U.y)
         if(x(d) - U.x(d, j)) <= length(Template) & (y(j) - U.y(d, j)) <= length(Template) & (x(d) -  U.x(d, j)) > 0 & (y(j) - U.y(d, j)) > 0
             TemplateOut(x(d),y(j)) = Source(ceil(x(d) -  U.x(d, j)),ceil(y(j) -  U.y(d, j))); 
+            SourceOut(x(d), y(j)) = Source(x(d), y(j));
         end
     end
 end
 
 % plot the outputed image
-TemplateOut(:, 512) = 0;
-TemplateOut(512,:) = 0;
+
 figure; imagesc([Template, Source]); title("Template vs Source"); colormap gray
 figure; imagesc(TemplateOut); colormap gray; title("Transformed Image");
 figure; imshowpair(TemplateOut, Source); colormap gray; title("Transformed Image vs Source");

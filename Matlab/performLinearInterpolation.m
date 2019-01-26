@@ -1,6 +1,6 @@
 function [Tinterp, U] = performLinearInterpolation(Template, tRegrid,U, gridObject)
-uVecX = tRegrid.x;
-uVecY = tRegrid.y;
+uVecX = U.x;
+uVecY = U.y;
 
 uVecXLen = length(uVecX);
 uVecYLen = length(uVecY);
