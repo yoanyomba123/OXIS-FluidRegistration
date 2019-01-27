@@ -1,8 +1,8 @@
-Author: D Yoan L Mekontchou Yombat 
+Author: D Yoan L Mekontchou Yomba
 
-## Viscous Fluid Registration Naive Implementation (Navier Stockes Based PDE)
+## Viscous Fluid Registration Implementation (Navier Stockes Based PDE)
 
-This repository contains a naive matlab implementation of the Viscous Fluid
+This repository contains a matlab implementation of the Viscous Fluid
 model for Image Registration.
 
 ## Goal And Aim of Image Registration (Non-Rigid/Non-Linear)
@@ -32,7 +32,7 @@ to achieve deformations that are closer to an independently defined ground truth
 This can be done for instance, as we chose to do here, by incorporating statistical
 information on the data set into the deformation.
 
-## Viscous Image Registratin
+## Viscous Image Registration
 
 The goal of fluid registration is to determine a mapping from one image (the target) to another image (the source) in the form of a displacement field, u, defined throughout the target volume. The way this problem is set up has been described in some detail in previous publications (Christensen et al 1996, Freeborough and Fox 1998, Crum et al 2001) to which we refer the interested reader for more detail. Briefly though, the displacement field is modelled as a time-dependent viscous fluid flow on the target image, driven by image-derived forces that act to improve a measure of image similarity. The response of the fluid to the applied forces at an instant is obtained by solving the Navier–Stokes equation for a compressible viscous fluid. Such a fluid does not exist in nature but is a convenient transformation model for registration.
 
@@ -44,8 +44,10 @@ field.
 
 
 # TODO 
-1. Implement Linear Interpolation For Reference frame mapping
-2. Work On Parameter Optimization
-
+1. Implementation of a cost function utilizing jacobian maps to preserve topology
+2. Implementation of vector fields based off of bspline coefficients
+3. Implementation of alterations to the navier stockes equation
+4. Further Work On Parameter Optimization
+5. Implementation of Deep Learning Techniques 
 
 
