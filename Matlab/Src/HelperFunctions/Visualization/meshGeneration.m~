@@ -1,0 +1,23 @@
+function meshGeneration(gridObject, displacement)
+    [rows, cols] = size(displacement.x);
+    
+    x = gridObject.grid.x;
+    y = gridObject.grid.y;
+    
+    Ux = displacement.x;
+    Uy = displacement.y;
+    
+    xMesh = zeros(rows, cols);
+    yMesh = zeros(rows, cols);
+    for i = 1: rows
+        for j = 1: cols
+            xpos = ceil(x(i, j) - Ux(i,j));
+            ypos = y(i,j) - Uy(i,j);
+            if(xpos > 0 && xpos <= rows && ypos >0 && ypos <= cols)
+                xMesh(i, j) = xpos;
+                yMesh(i, j) = ypos;
+            end
+        end
+    end
+    mesh(xMesh, yMesh, xMesh * 0);
+end

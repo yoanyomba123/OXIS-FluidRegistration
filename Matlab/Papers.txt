@@ -1,0 +1,26 @@
+Papers To Read
+-----------------------------------------------------------
+1. Mid-spcae-independent deformable image registration
+2. Quantum exotic PDE's
+3. A non-rigid medical image registration method based on improved linear elastic model
+4. Heat transfer analysis of three-dimensional flow in a channel of lower
+stretching wall
+5. A viscous  fluid  model  for  multimodal  non-rigid  image  registration
+using  mutual  information
+6. Free-form  registration  using  mutual  infor-
+Automated  model-based  tissue  classification  of  MR  images  of  the
+mation  and  curvature  regularization
+7. Nonrigid  registration  using  free-form  deformations:  application
+to breast MR image
+8.  A generic framework for non-rigid registration based on non-uniform multi-level free-form deformations
+9. High-performance medicalimage registration using new optimization techniques
+10. Non-linear registration aka Spatial normalisation
+11. Symmetric diffeomorphic modeling of longitudinal structural MRI
+12. Geodesic estimation for large deformation anatomical shape averaging and interpolation
+13. Symmetric diffeomorphic image registration with cross-correlation: Evaluating automated labeling of elderly and neurodegenerative brain
+14. Implicit reference-based group-wise image registration and its application to structural and functional MRI15. Avoiding symmetry-breaking spatial non-uniformity in deformable image registration via a quasi-volume-preserving constraint
+
+
+ML
+-------------------------------------------------------------
+Spatial Transformer Networks
